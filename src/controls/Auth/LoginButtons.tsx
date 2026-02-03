@@ -1,7 +1,12 @@
+import { useState } from "react";
+import "./LoginButtons.css";
+
 const GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth`;
 const MICROSOFT_AUTH_URL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
 
 export function LoginButtons() {
+  const [isOpen, setIsOpen] = useState(false);
+
   const googleLogin = () => {
     const params = new URLSearchParams({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
@@ -27,9 +32,37 @@ export function LoginButtons() {
   };
 
   return (
-    <div>
-      <button onClick={googleLogin}>Login with Google</button>
-      <button onClick={microsoftLogin}>Login with Microsoft</button>
+    <div className="login-actions">
+      <button className="login-trigger" onClick={() => setIsOpen(true)}>
+        Sign in
+      </button>
+      {isOpen ? (
+        <div className="login-overlay" role="presentation" onClick={() => setIsOpen(false)}>
+          <div
+            className="login-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="login-modal-header">
+              <h2 id="login-title">Sign in to continue</h2>
+              <button className="login-close" onClick={() => setIsOpen(false)} aria-label="Close sign in">
+                ×
+              </button>
+            </div>
+            <p className="login-modal-description">Choose a provider to access your account.</p>
+            <div className="login-providers">
+              <button className="provider-button" onClick={googleLogin}>
+                Sign in with Google
+              </button>
+              <button className="provider-button" onClick={microsoftLogin}>
+                Sign in with Microsoft
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
