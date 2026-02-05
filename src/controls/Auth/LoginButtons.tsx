@@ -1,16 +1,50 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./LoginButtons.css";
 
 const GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth`;
 const MICROSOFT_AUTH_URL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
+const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN ?? `https://api.emperjs.com`;
+
+type SessionState = {
+  authenticated: boolean;
+  provider?: string;
+};
 
 export function LoginButtons() {
   const [isOpen, setIsOpen] = useState(false);
+  const [session, setSession] = useState<SessionState | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+
+  const sessionEndpoint = useMemo(() => `${AUTH_API_ORIGIN}/auth/session`, []);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const response = await fetch(sessionEndpoint, {
+          credentials: `include`,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Session check failed: ${response.status}`);
+        }
+
+        const data = (await response.json()) as SessionState;
+        setSession(data);
+      } catch (error) {
+        console.error(`Failed to load session`, error);
+        setSession({ authenticated: false });
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+
+    void loadSession();
+  }, [sessionEndpoint]);
 
   const googleLogin = () => {
     const params = new URLSearchParams({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      redirect_uri: `https://api.emperjs.com/auth/google/callback`,
+      redirect_uri: `${AUTH_API_ORIGIN}/auth/google/callback`,
       response_type: `code`,
       scope: `openid email profile`,
       prompt: `select_account`,
@@ -22,7 +56,7 @@ export function LoginButtons() {
   const microsoftLogin = () => {
     const params = new URLSearchParams({
       client_id: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
-      redirect_uri: `https://api.emperjs.com/auth/microsoft/callback`,
+      redirect_uri: `${AUTH_API_ORIGIN}/auth/microsoft/callback`,
       response_type: `code`,
       scope: `openid email profile`,
       response_mode: `query`,
@@ -30,6 +64,18 @@ export function LoginButtons() {
 
     window.location.href = `${MICROSOFT_AUTH_URL}?${params}`;
   };
+
+  if (isLoadingSession) {
+    return <div className="login-status">Checking session...</div>;
+  }
+
+  if (session?.authenticated) {
+    return (
+      <div className="login-status" title={session.provider ? `Signed in with ${session.provider}` : undefined}>
+        Signed in
+      </div>
+    );
+  }
 
   return (
     <div className="login-actions">
@@ -43,7 +89,7 @@ export function LoginButtons() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="login-title"
-            onClick={(event) => event.stopPropagation()}
+            onClick={event => event.stopPropagation()}
           >
             <div className="login-modal-header">
               <h2 id="login-title">Sign in to continue</h2>

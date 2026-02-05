@@ -67,3 +67,8 @@
   width: 100%;
   justify-content: center;
 }
+
+.login-status {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
