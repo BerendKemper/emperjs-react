@@ -1,35 +1,89 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
 import { useSession } from "../controls/Auth/useSession";
 import "./AdminUsersPage.css";
+
+const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
 type UserRecord = {
   id: string;
   name: string;
   email: string;
   roles: string[];
-  status: "active" | "disabled";
+  status: `active` | `disabled`;
 };
 
-const DEMO_USERS: UserRecord[] = [];
+type UsersApiRecord = {
+  id: string;
+  email: string;
+  display_name: string | null;
+  roles: string[];
+  is_active: number;
+};
 
 export function AdminUsersPage() {
   const { session, isLoading } = useSession();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(``);
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   const isAuthenticated = session?.authenticated;
-  const isAdmin = session?.roles?.includes("admin") || session?.roles?.includes("owner");
+  const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!isAuthenticated || !isAdmin) {
+        setUsers([]);
+        setUsersError(null);
+        setIsUsersLoading(false);
+        return;
+      }
+
+      setIsUsersLoading(true);
+      setUsersError(null);
+
+      try {
+        const response = await fetch(`${AUTH_API_ORIGIN}/users`, {
+          method: `GET`,
+          credentials: `include`,
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const payload = (await response.json()) as { users?: UsersApiRecord[] };
+        const nextUsers = (payload.users ?? []).map(user => ({
+          id: user.id,
+          name: user.display_name?.trim() ? user.display_name : user.email,
+          email: user.email,
+          roles: Array.isArray(user.roles) ? user.roles : [],
+          status: user.is_active === 1 ? `active` : `disabled`,
+        }));
+        setUsers(nextUsers);
+      } catch (caughtError) {
+        const message = caughtError instanceof Error ? caughtError.message : `Failed to load users.`;
+        setUsers([]);
+        setUsersError(message);
+      } finally {
+        setIsUsersLoading(false);
+      }
+    };
+
+    void loadUsers();
+  }, [isAuthenticated, isAdmin]);
 
   const filteredUsers = useMemo(() => {
     if (!query) {
-      return DEMO_USERS;
+      return users;
     }
 
     const normalizedQuery = query.toLowerCase();
-    return DEMO_USERS.filter(user =>
-      [user.name, user.email, user.roles.join(" ")].some(value => value.toLowerCase().includes(normalizedQuery)),
+    return users.filter(user =>
+      [user.name, user.email, user.roles.join(` `)].some(value => value.toLowerCase().includes(normalizedQuery))
     );
-  }, [query]);
+  }, [query, users]);
 
   if (isLoading) {
     return (
@@ -97,10 +151,19 @@ export function AdminUsersPage() {
             <span>{filteredUsers.length} total</span>
           </div>
 
-          {filteredUsers.length === 0 ? (
+          {isUsersLoading ? (
+            <div className="admin-users__empty">
+              <p>Loading users...</p>
+            </div>
+          ) : usersError ? (
+            <div className="admin-users__empty">
+              <p>Unable to load users.</p>
+              <p>{usersError}</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
             <div className="admin-users__empty">
               <p>No users to display yet.</p>
-              <p>Connect the admin list API to populate this view.</p>
+              <p>Try changing your filters.</p>
             </div>
           ) : (
             <div className="admin-users__table">
