@@ -14,7 +14,8 @@ export function Header() {
         <Link to="/">Home</Link>
         <Link to="/shop">Shop</Link>
         {!isLoading && isAuthenticated ? <Link to="/settings">Settings</Link> : null}
-        {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/users">Admin</Link> : null}
+        {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/users">Users</Link> : null}
+        {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/products">Products</Link> : null}
       </div>
       <LoginButtons />
     </nav>

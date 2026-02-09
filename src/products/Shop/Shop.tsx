@@ -1,131 +1,170 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { fetchShopProducts } from "../../services/shopApi";
+import type { ShopProduct } from "../../types/shop";
 import { ShopCard } from "../ShopCard/ShopCard";
-import type { ArtItem } from "../../types/art";
 import "./Shop.css";
-import MOCK_ITEMS from './MockItems.json';
 
-export const Shop: React.FC = () => {
-  const [items, setItems] = useState<ArtItem[]>([]);
-  type Key = `date` | `price` | `title`;
-  const [filters, setFilters] = useState({
-    title: ``,
-    artist: ``,
-    minPrice: null as number | null,
-    maxPrice: null as number | null,
-    sortBy: `date` as Key,
-  });
+type SortKey = `date` | `priceAsc` | `priceDesc` | `name`;
+
+export function Shop() {
+  const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [search, setSearch] = useState(``);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [minPrice, setMinPrice] = useState<number | null>(null);
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>(`date`);
 
   useEffect(() => {
-    fetch(`/api/arts`) // your Worker endpoint
-      .then(res => {
-        if (!res.ok) throw new Error(`Failed to fetch arts`);
-        return res.json();
-      })
-      .then((data: ArtItem[]) => setItems(data))
-      // Simulate API fetch with mock data
-      .catch(() => setItems(MOCK_ITEMS));
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchShopProducts();
+        setProducts(data);
+      } catch (caughtError) {
+        const message = caughtError instanceof Error ? caughtError.message : `Failed to load products`;
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void load();
   }, []);
 
-  // WRONG because it filters the cards that were returned from an API call.
-  // INSTEAD must apply a filter in the API query
-  // TEMPORARY WORKAROUND
-  const filteredItems = items
-    .filter(item =>
-      item.title.toLowerCase().includes(filters.title.toLowerCase())
-    )
-    .filter(item =>
-      filters.artist
-        ? item.artist.toLowerCase().includes(filters.artist.toLowerCase())
-        : true
-    )
-    .filter(item =>
-      filters.minPrice !== null ? item.price >= filters.minPrice : true
-    )
-    .filter(item =>
-      filters.maxPrice !== null ? item.price <= filters.maxPrice : true
-    )
-    .sort((a, b) => {
-      if (filters.sortBy === `price`) return a.price - b.price;
-      if (filters.sortBy === `title`)
-        return a.title.localeCompare(b.title);
-      return (
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-      );
+  const availableTags = useMemo(() => {
+    const allTags = products.flatMap(product => product.tags);
+    return [...new Set(allTags)].sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    const filtered = products
+      .filter(product => {
+        if (!query) return true;
+        const haystack = `${product.name} ${product.description ?? ``}`.toLowerCase();
+        return haystack.includes(query);
+      })
+      .filter(product => {
+        if (selectedTags.length === 0) return true;
+        return selectedTags.every(tag => product.tags.includes(tag));
+      })
+      .filter(product => (minPrice !== null ? product.priceCents >= minPrice * 100 : true))
+      .filter(product => (maxPrice !== null ? product.priceCents <= maxPrice * 100 : true));
+
+    filtered.sort((a, b) => {
+      if (sortBy === `priceAsc`) return a.priceCents - b.priceCents;
+      if (sortBy === `priceDesc`) return b.priceCents - a.priceCents;
+      if (sortBy === `name`) return a.name.localeCompare(b.name);
+      return b.createdAt - a.createdAt;
     });
 
+    return filtered;
+  }, [maxPrice, minPrice, products, search, selectedTags, sortBy]);
 
+  const toggleTag = (tag: string) => {
+    setSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
+  };
+
+  const clearFilters = () => {
+    setSearch(``);
+    setSelectedTags([]);
+    setMinPrice(null);
+    setMaxPrice(null);
+    setSortBy(`date`);
+  };
 
   return (
-    <div className="shop">
-      <aside className="sidebar">
-        <div className="filters">
-          <h3>Filters</h3>
+    <section className="shop-view">
+      <header className="shop-view__header">
+        <h1>Shop collection</h1>
+        <p>Browse all active products and refine with tags, search, and price.</p>
+      </header>
 
-          <input
-            placeholder="Title"
-            value={filters.title}
-            onChange={e =>
-              setFilters({ ...filters, title: e.target.value })
-            }
-          />
+      <div className="shop-view__layout">
+        <aside className="shop-filters">
+          <div className="shop-filters__row">
+            <label htmlFor="shop-search">Search</label>
+            <input id="shop-search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name or description" />
+          </div>
 
-          <input
-            placeholder="Artist"
-            value={filters.artist}
-            onChange={e =>
-              setFilters({ ...filters, artist: e.target.value })
-            }
-          />
+          <div className="shop-filters__row">
+            <label htmlFor="shop-min">Min price</label>
+            <input
+              id="shop-min"
+              type="number"
+              min={0}
+              value={minPrice ?? ``}
+              onChange={event => setMinPrice(event.target.value ? Number(event.target.value) : null)}
+              placeholder="0"
+            />
+          </div>
 
-          <input
-            type="number"
-            placeholder="Min price"
-            onChange={e =>
-              setFilters({
-                ...filters,
-                minPrice: e.target.value ? Number(e.target.value) : null,
-              })
-            }
-          />
+          <div className="shop-filters__row">
+            <label htmlFor="shop-max">Max price</label>
+            <input
+              id="shop-max"
+              type="number"
+              min={0}
+              value={maxPrice ?? ``}
+              onChange={event => setMaxPrice(event.target.value ? Number(event.target.value) : null)}
+              placeholder="999"
+            />
+          </div>
 
-          <input
-            type="number"
-            placeholder="Max price"
-            onChange={e =>
-              setFilters({
-                ...filters,
-                maxPrice: e.target.value ? Number(e.target.value) : null,
-              })
-            }
-          />
+          <div className="shop-filters__row">
+            <label htmlFor="shop-sort">Sort</label>
+            <select id="shop-sort" value={sortBy} onChange={event => setSortBy(event.target.value as SortKey)}>
+              <option value="date">Newest</option>
+              <option value="priceAsc">Price low to high</option>
+              <option value="priceDesc">Price high to low</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
 
-          <select
-            value={filters.sortBy}
-            onChange={e =>
-              setFilters({
-                ...filters,
-                sortBy: e.target.value as Key,
-              })
-            }
-          >
-            <option value="date">Newest</option>
-            <option value="price">Price</option>
-            <option value="title">Title</option>
-          </select>
-        </div>
-      </aside>
-      <section className="items">
-        {filteredItems.map(item => (
-          <ShopCard
-            key={item.id} // React list key
-            title={item.title} // map ArtItem → UI props
-            artist={item.artist}
-            price={item.price}
-            imageUrl={`/api/images/${item.imageKey}`} // map imageKey → URL
-          />
-        ))}
-      </section >
-    </div>
+          <div className="shop-filters__row shop-filters__row--tags">
+            <p>Tags</p>
+            <div className="shop-filters__tags">
+              {availableTags.length === 0 ? <span className="shop-filters__empty">No tags available yet.</span> : availableTags.map(tag => (
+                <button
+                  type="button"
+                  key={tag}
+                  className={selectedTags.includes(tag) ? `is-active` : ``}
+                  onClick={() => toggleTag(tag)}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button type="button" onClick={clearFilters}>Reset filters</button>
+        </aside>
+
+        <section className="shop-results">
+          {isLoading ? <p className="shop-results__state">Loading products...</p> : null}
+          {error ? <p className="shop-results__state shop-results__state--error">{error}</p> : null}
+          {!isLoading && !error && filteredProducts.length === 0 ? <p className="shop-results__state">No products match your filters.</p> : null}
+
+          <div className="shop-results__grid">
+            {filteredProducts.map(product => (
+              <ShopCard
+                key={product.id}
+                name={product.name}
+                description={product.description}
+                priceCents={product.priceCents}
+                currency={product.currency}
+                imageUrl={product.imageUrl}
+                tags={product.tags}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+    </section>
   );
-};
+}

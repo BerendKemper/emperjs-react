@@ -1,28 +1,116 @@
-.shop {
-  display: flex;
-  flex-direction: row;
-  gap: var(--component-spacing);
-}
-
-.shop .filters {
-  position: sticky;
-  top: 0;
+.shop-view {
   display: flex;
   flex-direction: column;
-  gap: var(--component-spacing);
-  box-shadow: 0 0 0 1px var(--border-default);
-  padding: var(--component-spacing);
+  gap: 24px;
+  padding: 24px 0 42px;
 }
 
-.shop .items {
+.shop-view__header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+.shop-view__header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.shop-view__layout {
   display: grid;
-  gap: var(--component-spacing);
-  grid-template-columns: repeat(auto-fill, 300px);
-  width: -webkit-fill-available;
-  justify-content: center;
+  gap: 20px;
+  grid-template-columns: minmax(250px, 300px) 1fr;
 }
 
-/* Testing */
-.shop {
-  gap: unset;
+.shop-filters {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: rgba(148, 163, 184, 0.08);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.08);
+  padding: 16px;
+}
+
+.shop-filters__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-filters__row label,
+.shop-filters__row p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.shop-filters__row input,
+.shop-filters__row select {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: transparent;
+  color: inherit;
+  padding: 9px 12px;
+}
+
+.shop-filters__row--tags {
+  padding-top: 4px;
+}
+
+.shop-filters__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shop-filters__tags button {
+  font-size: 0.83rem;
+  border-radius: 999px;
+  padding: 5px 10px;
+  box-shadow: none;
+}
+
+.shop-filters__tags button.is-active {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.shop-filters__empty {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.shop-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.shop-results__state {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.shop-results__state--error {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.shop-results__grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (max-width: 960px) {
+  .shop-view__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-filters {
+    position: static;
+  }
 }
