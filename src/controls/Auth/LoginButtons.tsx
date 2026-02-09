@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
-import { useSession } from "./useSession";
+import { AUTH_SESSION_CHANGED_EVENT, useSession } from "./useSession";
 import "./LoginButtons.css";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
 export function LoginButtons() {
   const [isOpen, setIsOpen] = useState(false);
-  const { session, isLoading } = useSession();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const { session, isLoading, refreshSession } = useSession();
 
   const signedInLabel = useMemo(() => {
     if (!session?.authenticated) {
@@ -32,14 +34,48 @@ export function LoginButtons() {
     window.location.href = `${AUTH_API_ORIGIN}/auth/microsoft/start?${params.toString()}`;
   };
 
+  const logout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+    setLogoutError(null);
+
+    try {
+      const response = await fetch(`${AUTH_API_ORIGIN}/auth/logout`, {
+        method: `POST`,
+        credentials: `include`,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Logout failed: ${response.status}`);
+      }
+
+      await refreshSession();
+      window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
+    } catch (caughtError) {
+      console.error(`Failed to logout`, caughtError);
+      setLogoutError(caughtError instanceof Error ? caughtError.message : `Unable to sign out`);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="login-status">Checking session...</div>;
   }
 
   if (session?.authenticated) {
     return (
-      <div className="login-status" title={session.provider ? `Signed in with ${session.provider}` : undefined}>
-        {signedInLabel}
+      <div className="login-authenticated">
+        <div className="login-status" title={session.provider ? `Signed in with ${session.provider}` : undefined}>
+          {signedInLabel}
+        </div>
+        <button className="logout-trigger" onClick={logout} disabled={isLoggingOut}>
+          {isLoggingOut ? `Signing out...` : `Sign out`}
+        </button>
+        {logoutError ? <div className="login-error" role="alert">{logoutError}</div> : null}
       </div>
     );
   }

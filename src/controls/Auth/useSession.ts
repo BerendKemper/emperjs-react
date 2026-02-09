@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
+export const AUTH_SESSION_CHANGED_EVENT = `auth:session-changed`;
 
 export type SessionState = {
   authenticated: boolean;
@@ -53,6 +54,15 @@ export function useSession(): SessionResult {
 
   useEffect(() => {
     void refreshSession();
+  }, [refreshSession]);
+
+  useEffect(() => {
+    const handleSessionChanged = () => {
+      void refreshSession();
+    };
+
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, handleSessionChanged);
   }, [refreshSession]);
 
   return {
