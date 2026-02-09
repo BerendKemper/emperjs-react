@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
-type SessionState = {
+export type SessionState = {
   authenticated: boolean;
   userId?: string;
   roles?: string[];
@@ -62,5 +62,3 @@ export function useSession(): SessionResult {
     refreshSession,
   };
 }
-
-export type { SessionState };

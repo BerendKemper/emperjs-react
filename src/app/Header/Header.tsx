@@ -6,7 +6,7 @@ import "./Header.css";
 export function Header() {
   const { session, isLoading } = useSession();
   const isAuthenticated = session?.authenticated;
-  const isAdmin = session?.roles?.includes("admin") || session?.roles?.includes("owner");
+  const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
 
   return (
     <nav id="header">
