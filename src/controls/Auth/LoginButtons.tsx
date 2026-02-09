@@ -2,8 +2,6 @@ import { useMemo, useState } from "react";
 import { useSession } from "./useSession";
 import "./LoginButtons.css";
 
-const GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth`;
-const MICROSOFT_AUTH_URL = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 
 export function LoginButtons() {
@@ -22,28 +20,16 @@ export function LoginButtons() {
     return `Signed in`;
   }, [session]);
 
-  const googleLogin = () => {
-    const params = new URLSearchParams({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      redirect_uri: `${AUTH_API_ORIGIN}/auth/google/callback`,
-      response_type: `code`,
-      scope: `openid email profile`,
-      prompt: `select_account`,
-    });
+  const currentReturnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
-    window.location.href = `${GOOGLE_AUTH_URL}?${params}`;
+  const googleLogin = () => {
+    const params = new URLSearchParams({ returnTo: currentReturnTo });
+    window.location.href = `${AUTH_API_ORIGIN}/auth/google/start?${params.toString()}`;
   };
 
   const microsoftLogin = () => {
-    const params = new URLSearchParams({
-      client_id: import.meta.env.VITE_MICROSOFT_CLIENT_ID,
-      redirect_uri: `${AUTH_API_ORIGIN}/auth/microsoft/callback`,
-      response_type: `code`,
-      scope: `openid email profile`,
-      response_mode: `query`,
-    });
-
-    window.location.href = `${MICROSOFT_AUTH_URL}?${params}`;
+    const params = new URLSearchParams({ returnTo: currentReturnTo });
+    window.location.href = `${AUTH_API_ORIGIN}/auth/microsoft/start?${params.toString()}`;
   };
 
   if (isLoading) {
