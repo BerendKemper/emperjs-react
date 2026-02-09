@@ -72,3 +72,19 @@
   font-weight: 600;
   color: var(--text-secondary);
 }
+
+.login-authenticated {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout-trigger {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+.login-error {
+  color: var(--danger, #b42318);
+  font-size: 0.85rem;
+}
