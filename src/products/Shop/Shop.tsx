@@ -5,6 +5,10 @@ import { ShopCard } from "../ShopCard/ShopCard";
 import "./Shop.css";
 
 type SortKey = `date` | `priceAsc` | `priceDesc` | `name`;
+type AppliedFilters = {
+  search: string;
+  selectedTags: string[];
+};
 
 export function Shop() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -12,8 +16,12 @@ export function Shop() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState(``);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [draftSearch, setDraftSearch] = useState(``);
+  const [draftSelectedTags, setDraftSelectedTags] = useState<string[]>([]);
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
+    search: ``,
+    selectedTags: [],
+  });
   const [minPrice, setMinPrice] = useState<number | null>(null);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>(`date`);
@@ -34,39 +42,36 @@ export function Shop() {
   useEffect(() => {
     let isCancelled = false;
 
-    const timeoutId = setTimeout(() => {
-      const load = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const data = await fetchShopProducts({
-            name: search,
-            tags: selectedTags,
-          });
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchShopProducts({
+          name: appliedFilters.search,
+          tags: appliedFilters.selectedTags,
+        });
 
-          if (!isCancelled) {
-            setProducts(data);
-          }
-        } catch (caughtError) {
-          if (!isCancelled) {
-            const message = caughtError instanceof Error ? caughtError.message : `Failed to load products`;
-            setError(message);
-          }
-        } finally {
-          if (!isCancelled) {
-            setIsLoading(false);
-          }
+        if (!isCancelled) {
+          setProducts(data);
         }
-      };
+      } catch (caughtError) {
+        if (!isCancelled) {
+          const message = caughtError instanceof Error ? caughtError.message : `Failed to load products`;
+          setError(message);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-      void load();
-    }, 250);
+    void load();
 
     return () => {
       isCancelled = true;
-      clearTimeout(timeoutId);
     };
-  }, [search, selectedTags]);
+  }, [appliedFilters]);
 
   const availableTags = useMemo(() => {
     const allTags = allProducts.flatMap(product => product.tags);
@@ -89,12 +94,28 @@ export function Shop() {
   }, [maxPrice, minPrice, products, sortBy]);
 
   const toggleTag = (tag: string) => {
-    setSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
+    setDraftSelectedTags(current => (current.includes(tag) ? current.filter(value => value !== tag) : [...current, tag]));
+  };
+
+  const normalizeTagSelection = (tags: string[]): string[] => [...new Set(tags)].sort((a, b) => a.localeCompare(b));
+
+  const hasPendingFilterChanges = useMemo(() => {
+    const normalizedDraftTags = normalizeTagSelection(draftSelectedTags);
+    const normalizedAppliedTags = normalizeTagSelection(appliedFilters.selectedTags);
+    return draftSearch.trim() !== appliedFilters.search || normalizedDraftTags.join(`,`) !== normalizedAppliedTags.join(`,`);
+  }, [appliedFilters.search, appliedFilters.selectedTags, draftSearch, draftSelectedTags]);
+
+  const applyFilters = () => {
+    setAppliedFilters({
+      search: draftSearch.trim(),
+      selectedTags: normalizeTagSelection(draftSelectedTags),
+    });
   };
 
   const clearFilters = () => {
-    setSearch(``);
-    setSelectedTags([]);
+    setDraftSearch(``);
+    setDraftSelectedTags([]);
+    setAppliedFilters({ search: ``, selectedTags: [] });
     setMinPrice(null);
     setMaxPrice(null);
     setSortBy(`date`);
@@ -111,7 +132,17 @@ export function Shop() {
         <aside className="shop-filters">
           <div className="shop-filters__row">
             <label htmlFor="shop-search">Search</label>
-            <input id="shop-search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by product name" />
+            <input
+              id="shop-search"
+              value={draftSearch}
+              onChange={event => setDraftSearch(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === `Enter`) {
+                  applyFilters();
+                }
+              }}
+              placeholder="Search by product name"
+            />
           </div>
 
           <div className="shop-filters__row">
@@ -155,7 +186,7 @@ export function Shop() {
                 <button
                   type="button"
                   key={tag}
-                  className={selectedTags.includes(tag) ? `is-active` : ``}
+                  className={draftSelectedTags.includes(tag) ? `is-active` : ``}
                   onClick={() => toggleTag(tag)}
                 >
                   #{tag}
@@ -164,7 +195,13 @@ export function Shop() {
             </div>
           </div>
 
-          <button type="button" onClick={clearFilters}>Reset filters</button>
+          <div className="shop-filters__actions">
+            <button type="button" onClick={applyFilters} disabled={!hasPendingFilterChanges || isLoading}>
+              {isLoading ? `Applying...` : `Apply filters`}
+            </button>
+            <button type="button" onClick={clearFilters}>Reset filters</button>
+          </div>
+          {hasPendingFilterChanges ? <p className="shop-filters__hint">You changed filters. Click Apply filters to refresh results.</p> : null}
         </aside>
 
         <section className="shop-results">
