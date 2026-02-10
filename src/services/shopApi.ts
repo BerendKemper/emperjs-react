@@ -9,6 +9,8 @@ const API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
 export interface ShopProductQuery {
   name?: string;
   tags?: string[];
+  minPriceCents?: number;
+  maxPriceCents?: number;
   currency?: string;
   isActive?: 0 | 1;
 }
@@ -37,6 +39,20 @@ function buildShopProductQueryString(query?: ShopProductQuery): string {
     for (const tag of normalizedTags) {
       params.append(`tags`, tag);
     }
+  }
+
+  if (typeof query.minPriceCents === `number`) {
+    if (!Number.isSafeInteger(query.minPriceCents) || query.minPriceCents < 0) {
+      throw new Error(`minPriceCents must be a non-negative safe integer`);
+    }
+    params.set(`min_price_cents`, String(query.minPriceCents));
+  }
+
+  if (typeof query.maxPriceCents === `number`) {
+    if (!Number.isSafeInteger(query.maxPriceCents) || query.maxPriceCents < 0) {
+      throw new Error(`maxPriceCents must be a non-negative safe integer`);
+    }
+    params.set(`max_price_cents`, String(query.maxPriceCents));
   }
 
   if (query.currency?.trim()) {
