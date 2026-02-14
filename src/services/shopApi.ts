@@ -93,11 +93,6 @@ function buildShopProductQueryString(query?: ShopProductQuery): string {
   return queryString ? `?${queryString}` : ``;
 }
 
-export async function fetchShopProducts(query?: ShopProductQuery): Promise<ShopProduct[]> {
-  const page = await fetchShopProductsPage(query);
-  return page.data;
-}
-
 export async function fetchShopProductsPage(query?: ShopProductQuery): Promise<ShopProductsPage> {
   const queryString = buildShopProductQueryString(query);
   const response = await fetch(`${API_ORIGIN}/shop/products${queryString}`, {
@@ -125,22 +120,6 @@ export async function uploadProductImage(file: File): Promise<UploadedImage> {
   });
 
   return parseJson<UploadedImage>(response);
-}
-
-export async function createShopProduct(
-  payload: CreateShopProductPayload
-): Promise<ShopProduct> {
-  const response = await fetch(`${API_ORIGIN}/shop/products`, {
-    method: `POST`,
-    credentials: `include`,
-    headers: {
-      "Content-Type": `application/json`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await parseJson<{ product?: ShopProduct; article?: ShopProduct }>(response);
-  return data.product ?? data.article ?? (() => { throw new Error(`Invalid create response`); })();
 }
 
 export async function fetchShopArticleBySlug(slug: string): Promise<ShopProduct> {
@@ -185,23 +164,6 @@ export async function updateShopArticle(
     body: JSON.stringify(payload),
   });
   return parseJson<ShopArticleUpdateResponse>(response);
-}
-
-export async function deleteShopProduct(selector: { id?: string; slug?: string }): Promise<DeleteShopProductResponse> {
-  const params = new URLSearchParams();
-  if (selector.id?.trim()) params.set(`id`, selector.id.trim());
-  if (selector.slug?.trim()) params.set(`slug`, selector.slug.trim().toLowerCase());
-
-  if (!params.toString()) {
-    throw new Error(`deleteShopProduct requires id or slug`);
-  }
-
-  const response = await fetch(`${API_ORIGIN}/shop/products?${params.toString()}`, {
-    method: `DELETE`,
-    credentials: `include`,
-  });
-
-  return parseJson<DeleteShopProductResponse>(response);
 }
 
 export async function deleteShopArticle(selector: { id?: string; slug?: string }): Promise<DeleteShopProductResponse> {
