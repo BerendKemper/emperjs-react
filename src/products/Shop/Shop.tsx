@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { fetchShopFilters, fetchShopProductsPage } from "../../services/shopApi";
 import type { ShopFilterOption, ShopProduct } from "../../types/shop";
 import { ShopCard } from "../ShopCard/ShopCard";
@@ -46,8 +47,84 @@ const SORT_TO_QUERY: Record<SortKey, string> = {
   priceUpdated: `price_cents:asc,updated_at:desc`,
 };
 
+const VALID_SORT_KEYS = new Set<SortKey>([
+  `date`,
+  `priceAsc`,
+  `priceDesc`,
+  `name`,
+  `priceCurrency`,
+  `priceUpdated`
+]);
+
 function normalizeTagSelection(tags: string[]): string[] {
   return [...new Set(tags)].sort((a, b) => a.localeCompare(b));
+}
+
+function parsePositiveInt(raw: string | null, fallback: number): number {
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
+  return parsed;
+}
+
+function parseNullableNonNegativeInt(raw: string | null): number | null {
+  if (!raw?.trim()) return null;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function parseSortKey(raw: string | null): SortKey {
+  if (!raw) return `date`;
+  return VALID_SORT_KEYS.has(raw as SortKey) ? (raw as SortKey) : `date`;
+}
+
+function parseAppliedFiltersFromSearchParams(searchParams: URLSearchParams): AppliedFilters {
+  const tagsRaw = searchParams.get(`tags`);
+  const tags = tagsRaw
+    ? normalizeTagSelection(
+      tagsRaw
+        .split(`,`)
+        .map(value => value.trim().toLowerCase())
+        .filter(Boolean)
+    )
+    : [];
+
+  return {
+    search: searchParams.get(`search`)?.trim() ?? ``,
+    selectedTags: tags,
+    minPriceCents: parseNullableNonNegativeInt(searchParams.get(`minPriceCents`)),
+    maxPriceCents: parseNullableNonNegativeInt(searchParams.get(`maxPriceCents`)),
+    sortBy: parseSortKey(searchParams.get(`sortBy`)),
+    page: parsePositiveInt(searchParams.get(`page`), 1),
+    pageSize: parsePositiveInt(searchParams.get(`pageSize`), 24),
+  };
+}
+
+function buildSearchParamsFromAppliedFilters(filters: AppliedFilters): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (filters.search) params.set(`search`, filters.search);
+  if (filters.selectedTags.length > 0) params.set(`tags`, filters.selectedTags.join(`,`));
+  if (filters.minPriceCents !== null) params.set(`minPriceCents`, String(filters.minPriceCents));
+  if (filters.maxPriceCents !== null) params.set(`maxPriceCents`, String(filters.maxPriceCents));
+  if (filters.sortBy !== `date`) params.set(`sortBy`, filters.sortBy);
+  if (filters.page !== 1) params.set(`page`, String(filters.page));
+  if (filters.pageSize !== 24) params.set(`pageSize`, String(filters.pageSize));
+
+  return params;
+}
+
+function areFiltersEqual(a: AppliedFilters, b: AppliedFilters): boolean {
+  return (
+    a.search === b.search &&
+    a.selectedTags.join(`,`) === b.selectedTags.join(`,`) &&
+    a.minPriceCents === b.minPriceCents &&
+    a.maxPriceCents === b.maxPriceCents &&
+    a.sortBy === b.sortBy &&
+    a.page === b.page &&
+    a.pageSize === b.pageSize
+  );
 }
 
 function normalizePriceToCents(value: number | null): number | null {
@@ -90,6 +167,12 @@ function writeCachedTags(tags: ShopFilterOption[]): void {
 }
 
 export function Shop() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialFilters = useMemo(
+    () => parseAppliedFiltersFromSearchParams(searchParams),
+    [searchParams]
+  );
+
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [pageState, setPageState] = useState<PageState>(DEFAULT_PAGE_STATE);
   const [availableTags, setAvailableTags] = useState<ShopFilterOption[]>(readCachedTags);
@@ -98,22 +181,37 @@ export function Shop() {
   const [error, setError] = useState<string | null>(null);
   const [tagSearch, setTagSearch] = useState(``);
 
-  const [draftSearch, setDraftSearch] = useState(``);
-  const [draftSelectedTags, setDraftSelectedTags] = useState<string[]>([]);
-  const [draftMinPrice, setDraftMinPrice] = useState<number | null>(null);
-  const [draftMaxPrice, setDraftMaxPrice] = useState<number | null>(null);
-  const [draftSortBy, setDraftSortBy] = useState<SortKey>(`date`);
-  const [draftPageSize, setDraftPageSize] = useState(24);
+  const [draftSearch, setDraftSearch] = useState(initialFilters.search);
+  const [draftSelectedTags, setDraftSelectedTags] = useState<string[]>(initialFilters.selectedTags);
+  const [draftMinPrice, setDraftMinPrice] = useState<number | null>(
+    initialFilters.minPriceCents !== null ? initialFilters.minPriceCents / 100 : null
+  );
+  const [draftMaxPrice, setDraftMaxPrice] = useState<number | null>(
+    initialFilters.maxPriceCents !== null ? initialFilters.maxPriceCents / 100 : null
+  );
+  const [draftSortBy, setDraftSortBy] = useState<SortKey>(initialFilters.sortBy);
+  const [draftPageSize, setDraftPageSize] = useState(initialFilters.pageSize);
 
-  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
-    search: ``,
-    selectedTags: [],
-    minPriceCents: null,
-    maxPriceCents: null,
-    sortBy: `date`,
-    page: 1,
-    pageSize: 24,
-  });
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>(initialFilters);
+
+  useEffect(() => {
+    const fromUrl = parseAppliedFiltersFromSearchParams(searchParams);
+    setAppliedFilters(current => (areFiltersEqual(current, fromUrl) ? current : fromUrl));
+    setDraftSearch(fromUrl.search);
+    setDraftSelectedTags(fromUrl.selectedTags);
+    setDraftMinPrice(fromUrl.minPriceCents !== null ? fromUrl.minPriceCents / 100 : null);
+    setDraftMaxPrice(fromUrl.maxPriceCents !== null ? fromUrl.maxPriceCents / 100 : null);
+    setDraftSortBy(fromUrl.sortBy);
+    setDraftPageSize(fromUrl.pageSize);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const next = buildSearchParamsFromAppliedFilters(appliedFilters).toString();
+    const current = searchParams.toString();
+    if (next !== current) {
+      setSearchParams(next, { replace: false });
+    }
+  }, [appliedFilters, searchParams, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
