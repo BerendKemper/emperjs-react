@@ -12,6 +12,7 @@ import type { ShopProduct } from "../types/shop";
 import "./ShopArticlePage.css";
 
 type StatusTone = `idle` | `loading` | `saving` | `success` | `error`;
+type EditorTab = `edit` | `preview`;
 
 function slugify(value: string): string {
   return value
@@ -47,6 +48,7 @@ export function ShopArticlePage() {
   });
   const [isEditing, setIsEditing] = useState(isCreateMode);
   const [file, setFile] = useState<File | null>(null);
+  const [editorTab, setEditorTab] = useState<EditorTab>(`edit`);
 
   const [name, setName] = useState(``);
   const [slugInput, setSlugInput] = useState(``);
@@ -73,6 +75,7 @@ export function ShopArticlePage() {
       setImageId(null);
       setImageUrl(null);
       setFile(null);
+      setEditorTab(`edit`);
       setIsEditing(true);
       setStatus({ tone: `idle`, message: `` });
       return;
@@ -95,6 +98,7 @@ export function ShopArticlePage() {
         setIsActive(loaded.isActive);
         setImageId(loaded.imageId);
         setImageUrl(loaded.imageUrl);
+        setEditorTab(`edit`);
         setStatus({ tone: `idle`, message: `` });
       } catch (caughtError) {
         if (cancelled) return;
@@ -166,6 +170,7 @@ export function ShopArticlePage() {
       setImageId(updated.article.imageId);
       setImageUrl(updated.article.imageUrl);
       setStatus({ tone: `success`, message: `Article updated` });
+      setEditorTab(`edit`);
       setIsEditing(false);
 
       if (updated.article.slug !== targetSlug) {
@@ -206,6 +211,21 @@ export function ShopArticlePage() {
   }
 
   const editing = isCreateMode || isEditing;
+  const draftTags = parseTags(tagsInput);
+  const previewArticle: ShopProduct = {
+    id: article?.id ?? `draft`,
+    slug: resolvedSlug || article?.slug || `draft`,
+    name: name.trim() || `Untitled article`,
+    description: description.trim() || null,
+    priceCents: Math.round((price ?? 0) * 100),
+    currency: (currency.trim().toUpperCase() || `EUR`).slice(0, 3),
+    imageId,
+    imageUrl,
+    tags: draftTags,
+    isActive,
+    createdAt: article?.createdAt ?? Date.now(),
+    updatedAt: Date.now(),
+  };
 
   return (
     <section className="shop-article">
@@ -224,48 +244,79 @@ export function ShopArticlePage() {
 
       <article className="shop-article__content">
         {editing ? (
-          <div className="shop-article__editor">
-            <label>
-              <span>Name *</span>
-              <input value={name} onChange={event => setName(event.target.value)} />
-            </label>
-            <label>
-              <span>Slug *</span>
-              <input value={slugInput} onChange={event => setSlugInput(event.target.value)} />
-              <small>Resolved: {resolvedSlug || `-`}</small>
-            </label>
-            <label>
-              <span>Description *</span>
-              <textarea rows={8} value={description} onChange={event => setDescription(event.target.value)} />
-            </label>
-            <div className="shop-article__row">
-              <label>
-                <span>Price *</span>
-                <input type="number" min={0} step="0.01" value={price ?? ``} onChange={event => setPrice(event.target.value ? Number(event.target.value) : null)} />
-              </label>
-              <label>
-                <span>Currency *</span>
-                <input value={currency} maxLength={3} onChange={event => setCurrency(event.target.value.toUpperCase())} />
-              </label>
-            </div>
-            <label>
-              <span>Tags</span>
-              <input value={tagsInput} onChange={event => setTagsInput(event.target.value)} placeholder="#tag1 #tag2" />
-            </label>
-            <label>
-              <span>Image</span>
-              {imageUrl ? <img src={imageUrl} alt={name || `article image`} className="shop-article__preview" /> : null}
-              <input type="file" accept="image/*" onChange={event => setFile(event.target.files?.[0] ?? null)} />
-              {imageId ? <button type="button" onClick={() => { setImageId(null); setImageUrl(null); }}>Remove image</button> : null}
-            </label>
-            <label className="shop-article__checkbox">
-              <input type="checkbox" checked={isActive} onChange={event => setIsActive(event.target.checked)} />
-              <span>Active</span>
-            </label>
-            <button type="button" onClick={() => void handleSave()} disabled={status.tone === `saving`}>
-              {isCreateMode ? `Create article` : `Save changes`}
-            </button>
-          </div>
+          <>
+            {isAdmin ? (
+              <div className="shop-article__tabs">
+                <button
+                  type="button"
+                  className={editorTab === `edit` ? `is-active` : ``}
+                  onClick={() => setEditorTab(`edit`)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className={editorTab === `preview` ? `is-active` : ``}
+                  onClick={() => setEditorTab(`preview`)}
+                >
+                  Preview
+                </button>
+              </div>
+            ) : null}
+            {editorTab === `edit` ? (
+              <div className="shop-article__editor">
+                <label>
+                  <span>Name *</span>
+                  <input value={name} onChange={event => setName(event.target.value)} />
+                </label>
+                <label>
+                  <span>Slug *</span>
+                  <input value={slugInput} onChange={event => setSlugInput(event.target.value)} />
+                  <small>Resolved: {resolvedSlug || `-`}</small>
+                </label>
+                <label>
+                  <span>Description *</span>
+                  <textarea rows={8} value={description} onChange={event => setDescription(event.target.value)} />
+                </label>
+                <div className="shop-article__row">
+                  <label>
+                    <span>Price *</span>
+                    <input type="number" min={0} step="0.01" value={price ?? ``} onChange={event => setPrice(event.target.value ? Number(event.target.value) : null)} />
+                  </label>
+                  <label>
+                    <span>Currency *</span>
+                    <input value={currency} maxLength={3} onChange={event => setCurrency(event.target.value.toUpperCase())} />
+                  </label>
+                </div>
+                <label>
+                  <span>Tags</span>
+                  <input value={tagsInput} onChange={event => setTagsInput(event.target.value)} placeholder="#tag1 #tag2" />
+                </label>
+                <label>
+                  <span>Image</span>
+                  {imageUrl ? <img src={imageUrl} alt={name || `article image`} className="shop-article__preview" /> : null}
+                  <input type="file" accept="image/*" onChange={event => setFile(event.target.files?.[0] ?? null)} />
+                  {imageId ? <button type="button" onClick={() => { setImageId(null); setImageUrl(null); }}>Remove image</button> : null}
+                </label>
+                <label className="shop-article__checkbox">
+                  <input type="checkbox" checked={isActive} onChange={event => setIsActive(event.target.checked)} />
+                  <span>Active</span>
+                </label>
+                <button type="button" onClick={() => void handleSave()} disabled={status.tone === `saving`}>
+                  {isCreateMode ? `Create article` : `Save changes`}
+                </button>
+              </div>
+            ) : (
+              <div className="shop-article__viewer">
+                {previewArticle.imageUrl ? <img src={previewArticle.imageUrl} alt={previewArticle.name} className="shop-article__hero" /> : null}
+                <p className="shop-article__meta">{`${(previewArticle.priceCents / 100).toFixed(2)} ${previewArticle.currency}`}</p>
+                <p>{previewArticle.description ?? `No description.`}</p>
+                <div className="shop-article__tags">
+                  {previewArticle.tags.length > 0 ? previewArticle.tags.map(tag => <span key={tag}>#{tag}</span>) : <span>#untagged</span>}
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="shop-article__viewer">
             {article?.imageUrl ? <img src={article.imageUrl} alt={article.name} className="shop-article__hero" /> : null}

@@ -22,6 +22,17 @@
   padding: 16px;
 }
 
+.shop-article__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.shop-article__tabs button.is-active {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.2);
+}
+
 .shop-article__editor {
   display: flex;
   flex-direction: column;
