@@ -56,13 +56,20 @@ function normalizePriceToCents(value: number | null): number | null {
   return Math.round(value * 100);
 }
 
+function sortTagOptionsByCount(tags: ShopFilterOption[]): ShopFilterOption[] {
+  return [...tags].sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.value.localeCompare(b.value);
+  });
+}
+
 function readCachedTags(): ShopFilterOption[] {
   try {
     const raw = sessionStorage.getItem(FILTERS_CACHE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as { tags?: ShopFilterOption[]; expiresAt?: number };
     if (!parsed.expiresAt || parsed.expiresAt < Date.now()) return [];
-    return Array.isArray(parsed.tags) ? parsed.tags : [];
+    return Array.isArray(parsed.tags) ? sortTagOptionsByCount(parsed.tags) : [];
   } catch {
     return [];
   }
@@ -115,8 +122,9 @@ export function Shop() {
       try {
         const data = await fetchShopFilters({ isActive: 1 });
         if (cancelled) return;
-        setAvailableTags(data.tags);
-        writeCachedTags(data.tags);
+        const sortedTags = sortTagOptionsByCount(data.tags);
+        setAvailableTags(sortedTags);
+        writeCachedTags(sortedTags);
       } catch {
         // Use cached values if request fails
       } finally {
