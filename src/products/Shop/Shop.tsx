@@ -495,6 +495,7 @@ export function Shop() {
             {products.map(product => (
               <ShopCard
                 key={product.id}
+                slug={product.slug}
                 name={product.name}
                 description={product.description}
                 priceCents={product.priceCents}

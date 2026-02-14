@@ -13,9 +13,9 @@ export function Header() {
       <div className="header-links">
         <Link to="/">Home</Link>
         <Link to="/shop">Shop</Link>
+        {!isLoading && isAuthenticated && isAdmin ? <Link to="/shop/articles/new">New Article</Link> : null}
         {!isLoading && isAuthenticated ? <Link to="/settings">Settings</Link> : null}
         {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/users">Users</Link> : null}
-        {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/products">Products</Link> : null}
       </div>
       <LoginButtons />
     </nav>

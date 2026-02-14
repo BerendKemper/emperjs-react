@@ -54,6 +54,17 @@ export interface CreateShopProductPayload {
   tags: string[];
 }
 
+export interface UpdateShopProductPayload {
+  slug?: string;
+  name?: string;
+  description?: string | null;
+  priceCents?: number;
+  currency?: string;
+  imageId?: string | null;
+  isActive?: boolean;
+  tags?: string[];
+}
+
 export interface UploadedImage {
   imageId: string;
   contentType: string;
@@ -67,6 +78,19 @@ export interface DeleteShopProductResponse {
     slug: string;
     name: string;
   };
+  cleanup: {
+    deletedImageMetadata: boolean;
+    deletedImageObject: boolean;
+    deletedOrphanTags: number;
+  };
+}
+
+export interface ShopArticleResponse {
+  article: ShopProduct;
+}
+
+export interface ShopArticleUpdateResponse {
+  article: ShopProduct;
   cleanup: {
     deletedImageMetadata: boolean;
     deletedImageObject: boolean;
