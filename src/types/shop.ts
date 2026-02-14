@@ -60,3 +60,16 @@ export interface UploadedImage {
   sizeBytes: number;
   url: string;
 }
+
+export interface DeleteShopProductResponse {
+  deleted: {
+    id: string;
+    slug: string;
+    name: string;
+  };
+  cleanup: {
+    deletedImageMetadata: boolean;
+    deletedImageObject: boolean;
+    deletedOrphanTags: number;
+  };
+}

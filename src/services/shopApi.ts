@@ -1,5 +1,6 @@
 import type {
   CreateShopProductPayload,
+  DeleteShopProductResponse,
   ShopFiltersResponse,
   ShopProductsPage,
   ShopProduct,
@@ -137,4 +138,21 @@ export async function createShopProduct(
 
   const data = await parseJson<{ product: ShopProduct }>(response);
   return data.product;
+}
+
+export async function deleteShopProduct(selector: { id?: string; slug?: string }): Promise<DeleteShopProductResponse> {
+  const params = new URLSearchParams();
+  if (selector.id?.trim()) params.set(`id`, selector.id.trim());
+  if (selector.slug?.trim()) params.set(`slug`, selector.slug.trim().toLowerCase());
+
+  if (!params.toString()) {
+    throw new Error(`deleteShopProduct requires id or slug`);
+  }
+
+  const response = await fetch(`${API_ORIGIN}/shop/products?${params.toString()}`, {
+    method: `DELETE`,
+    credentials: `include`,
+  });
+
+  return parseJson<DeleteShopProductResponse>(response);
 }
