@@ -182,3 +182,4 @@ export async function deleteShopArticle(selector: { id?: string; slug?: string }
 
   return parseJson<DeleteShopProductResponse>(response);
 }
+
