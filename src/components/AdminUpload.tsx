@@ -29,7 +29,7 @@ export const AdminUpload: React.FC = () => {
       if (!uploadRes.ok) throw new Error(`Upload failed`);
 
       // 3. Finalize metadata in Worker
-      await fetch(`/api/admin/finalize-article`, {
+      await fetch(`/api/admin/finalize-product`, {
         method: `POST`,
         headers: { Authorization: `Bearer ${localStorage.getItem(`jwt`)}` },
         body: JSON.stringify({ title, price, imageKey: objectKey })

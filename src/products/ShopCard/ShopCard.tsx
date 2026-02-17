@@ -31,7 +31,7 @@ export function ShopCard({
     <article className="shop-card">
       {imageUrl ? <img src={imageUrl} alt={name} className="shop-card__img" loading="lazy" /> : <div className="shop-card__placeholder">No image</div>}
       <div className="shop-card__body">
-        <h3><Link to={`/shop/articles/${encodeURIComponent(slug)}`}>{name}</Link></h3>
+        <h3><Link to={`/shop/products/${encodeURIComponent(slug)}`}>{name}</Link></h3>
         {description ? <p className="shop-card__description">{description}</p> : <p className="shop-card__description shop-card__description--empty">No description available.</p>}
         <p className="shop-card__price">{formatPrice(priceCents, currency)}</p>
         <div className="shop-card__tags">
@@ -43,3 +43,4 @@ export function ShopCard({
     </article>
   );
 }
+

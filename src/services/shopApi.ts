@@ -1,8 +1,8 @@
 import type {
   CreateShopProductPayload,
   DeleteShopProductResponse,
-  ShopArticleResponse,
-  ShopArticleUpdateResponse,
+  ShopProductResponse,
+  ShopProductUpdateResponse,
   ShopFiltersResponse,
   ShopProductsPage,
   ShopProduct,
@@ -134,16 +134,16 @@ export async function uploadProductImage(file: File): Promise<UploadedImage> {
   return parseJson<UploadedImage>(response);
 }
 
-export async function fetchShopArticleBySlug(slug: string): Promise<ShopProduct> {
-  const response = await fetch(`${API_ORIGIN}/shop/articles?slug=${encodeURIComponent(slug)}`, {
+export async function fetchShopProductBySlug(slug: string): Promise<ShopProduct> {
+  const response = await fetch(`${API_ORIGIN}/shop/product?slug=${encodeURIComponent(slug)}`, {
     credentials: `include`,
   });
-  const data = await parseJson<ShopArticleResponse>(response);
-  return data.article;
+  const data = await parseJson<ShopProductResponse>(response);
+  return data.product;
 }
 
-export async function createShopArticle(payload: CreateShopProductPayload): Promise<ShopProduct> {
-  const response = await fetch(`${API_ORIGIN}/shop/articles`, {
+export async function createShopProduct(payload: CreateShopProductPayload): Promise<ShopProduct> {
+  const response = await fetch(`${API_ORIGIN}/shop/product`, {
     method: `POST`,
     credentials: `include`,
     headers: {
@@ -152,22 +152,22 @@ export async function createShopArticle(payload: CreateShopProductPayload): Prom
     body: JSON.stringify(payload),
   });
 
-  const data = await parseJson<ShopArticleResponse>(response);
-  return data.article;
+  const data = await parseJson<ShopProductResponse>(response);
+  return data.product;
 }
 
-export async function updateShopArticle(
+export async function updateShopProduct(
   selector: { id?: string; slug?: string },
   payload: UpdateShopProductPayload
-): Promise<ShopArticleUpdateResponse> {
+): Promise<ShopProductUpdateResponse> {
   const params = new URLSearchParams();
   if (selector.id?.trim()) params.set(`id`, selector.id.trim());
   if (selector.slug?.trim()) params.set(`slug`, selector.slug.trim().toLowerCase());
   if (!params.toString()) {
-    throw new Error(`updateShopArticle requires id or slug`);
+    throw new Error(`updateShopProduct requires id or slug`);
   }
 
-  const response = await fetch(`${API_ORIGIN}/shop/articles?${params.toString()}`, {
+  const response = await fetch(`${API_ORIGIN}/shop/product?${params.toString()}`, {
     method: `PATCH`,
     credentials: `include`,
     headers: {
@@ -175,22 +175,23 @@ export async function updateShopArticle(
     },
     body: JSON.stringify(payload),
   });
-  return parseJson<ShopArticleUpdateResponse>(response);
+  return parseJson<ShopProductUpdateResponse>(response);
 }
 
-export async function deleteShopArticle(selector: { id?: string; slug?: string }): Promise<DeleteShopProductResponse> {
+export async function deleteShopProduct(selector: { id?: string; slug?: string }): Promise<DeleteShopProductResponse> {
   const params = new URLSearchParams();
   if (selector.id?.trim()) params.set(`id`, selector.id.trim());
   if (selector.slug?.trim()) params.set(`slug`, selector.slug.trim().toLowerCase());
 
   if (!params.toString()) {
-    throw new Error(`deleteShopArticle requires id or slug`);
+    throw new Error(`deleteShopProduct requires id or slug`);
   }
 
-  const response = await fetch(`${API_ORIGIN}/shop/articles?${params.toString()}`, {
+  const response = await fetch(`${API_ORIGIN}/shop/product?${params.toString()}`, {
     method: `DELETE`,
     credentials: `include`,
   });
 
   return parseJson<DeleteShopProductResponse>(response);
 }
+

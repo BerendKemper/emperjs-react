@@ -9,6 +9,10 @@ export interface ShopProduct {
   authorDisplayName: string | null;
   imageId: string | null;
   imageUrl: string | null;
+  images: Array<{
+    imageId: string;
+    imageUrl: string;
+  }>;
   tags: string[];
   isActive: boolean;
   createdAt: number;
@@ -52,7 +56,7 @@ export interface CreateShopProductPayload {
   description: string | null;
   priceCents: number;
   currency: string;
-  imageId: string | null;
+  imageIds: string[];
   isActive: boolean;
   tags: string[];
 }
@@ -63,7 +67,7 @@ export interface UpdateShopProductPayload {
   description?: string | null;
   priceCents?: number;
   currency?: string;
-  imageId?: string | null;
+  imageIds?: string[];
   isActive?: boolean;
   tags?: string[];
 }
@@ -82,21 +86,22 @@ export interface DeleteShopProductResponse {
     name: string;
   };
   cleanup: {
-    deletedImageMetadata: boolean;
-    deletedImageObject: boolean;
+    deletedImageMetadataCount: number;
+    deletedImageObjectCount: number;
     deletedOrphanTags: number;
   };
 }
 
-export interface ShopArticleResponse {
-  article: ShopProduct;
+export interface ShopProductResponse {
+  product: ShopProduct;
 }
 
-export interface ShopArticleUpdateResponse {
-  article: ShopProduct;
+export interface ShopProductUpdateResponse {
+  product: ShopProduct;
   cleanup: {
-    deletedImageMetadata: boolean;
-    deletedImageObject: boolean;
+    deletedImageMetadataCount: number;
+    deletedImageObjectCount: number;
     deletedOrphanTags: number;
   };
 }
+

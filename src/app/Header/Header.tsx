@@ -6,7 +6,7 @@ import "./Header.css";
 export function Header() {
   const { session, isLoading } = useSession();
   const isAuthenticated = session?.authenticated;
-  const canManageArticles =
+  const canManageProducts =
     session?.roles?.includes(`admin`) ||
     session?.roles?.includes(`owner`) ||
     session?.roles?.includes(`seller`);
@@ -17,7 +17,7 @@ export function Header() {
       <div className="header-links">
         <Link to="/">Home</Link>
         <Link to="/shop">Shop</Link>
-        {!isLoading && isAuthenticated && canManageArticles ? <Link to="/shop/articles/new">New Article</Link> : null}
+        {!isLoading && isAuthenticated && canManageProducts ? <Link to="/shop/products/new">New Product</Link> : null}
         {!isLoading && isAuthenticated ? <Link to="/settings">Settings</Link> : null}
         {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/users">Users</Link> : null}
       </div>
@@ -25,3 +25,4 @@ export function Header() {
     </nav>
   );
 }
+
