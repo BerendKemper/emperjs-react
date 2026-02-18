@@ -88,7 +88,7 @@ export interface DeleteShopProductResponse {
   cleanup: {
     deletedImageMetadataCount: number;
     deletedImageObjectCount: number;
-    deletedOrphanTags: number;
+    deletedUnreferencedTags: number;
   };
 }
 
@@ -101,7 +101,6 @@ export interface ShopProductUpdateResponse {
   cleanup: {
     deletedImageMetadataCount: number;
     deletedImageObjectCount: number;
-    deletedOrphanTags: number;
+    deletedUnreferencedTags: number;
   };
 }
-

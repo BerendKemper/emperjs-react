@@ -189,6 +189,12 @@
   color: #fff;
 }
 
+.shop-product__archive {
+  background: #78350f;
+  border-color: #92400e;
+  color: #fff;
+}
+
 @media (max-width: 720px) {
   .shop-product__row {
     grid-template-columns: 1fr;

@@ -38,7 +38,8 @@ export function ShopProductPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { session } = useSession();
-  const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
+  const isOwner = Boolean(session?.roles?.includes(`owner`));
+  const isAdmin = session?.roles?.includes(`admin`) || isOwner;
   const canManageProducts = isAdmin || session?.roles?.includes(`seller`);
   const isCreateMode = slug === `new` || location.pathname === `/shop/products/new`;
 
@@ -68,6 +69,13 @@ export function ShopProductPage() {
     session?.userId &&
     (isAdmin || (product?.authorUserId && product.authorUserId === session.userId))
   );
+  const isProductAuthor = Boolean(
+    session?.userId &&
+    product?.authorUserId &&
+    product.authorUserId === session.userId
+  );
+  const canDeleteCurrentProduct = canEditCurrentProduct && isOwner;
+  const canArchiveCurrentProduct = Boolean(product && (isOwner || isProductAuthor));
 
   const resolvedSlug = useMemo(() => slugify(slugInput || name), [name, slugInput]);
 
@@ -200,7 +208,7 @@ export function ShopProductPage() {
   };
 
   const handleDelete = async () => {
-    if (!canEditCurrentProduct) return;
+    if (!canDeleteCurrentProduct) return;
     const targetSlug = product?.slug ?? slug;
     if (!targetSlug) return;
     if (!window.confirm(`Delete product '${targetSlug}'?`)) return;
@@ -211,6 +219,26 @@ export function ShopProductPage() {
       navigate(`/shop`, { replace: true });
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : `Delete failed`;
+      setStatus({ tone: `error`, message });
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!canArchiveCurrentProduct) return;
+    const targetSlug = product?.slug ?? slug;
+    if (!targetSlug || !product?.isActive) return;
+    if (!window.confirm(`Archive product '${targetSlug}'?`)) return;
+
+    setStatus({ tone: `saving`, message: `Archiving product...` });
+    try {
+      const updated = await updateShopProduct({ slug: targetSlug }, { isActive: false });
+      setProduct(updated.product);
+      setIsActive(updated.product.isActive);
+      setStatus({ tone: `success`, message: `Product archived` });
+      setIsEditing(false);
+      setEditorTab(`edit`);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : `Archive failed`;
       setStatus({ tone: `error`, message });
     }
   };
@@ -297,7 +325,19 @@ export function ShopProductPage() {
             <button type="button" onClick={() => setIsEditing(current => !current)}>
               {isEditing ? `Cancel edit` : `Edit product`}
             </button>
-            <button type="button" className="shop-product__delete" onClick={handleDelete}>Delete product</button>
+            {canDeleteCurrentProduct ? (
+              <button type="button" className="shop-product__delete" onClick={handleDelete}>Delete product</button>
+            ) : null}
+            {canArchiveCurrentProduct ? (
+              <button
+                type="button"
+                className="shop-product__archive"
+                onClick={handleArchive}
+                disabled={!product?.isActive}
+              >
+                {product?.isActive ? `Archive product` : `Archived`}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </header>
@@ -500,4 +540,3 @@ export function ShopProductPage() {
     </section>
   );
 }
-
