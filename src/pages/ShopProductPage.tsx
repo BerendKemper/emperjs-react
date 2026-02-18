@@ -325,9 +325,6 @@ export function ShopProductPage() {
             <button type="button" onClick={() => setIsEditing(current => !current)}>
               {isEditing ? `Cancel edit` : `Edit product`}
             </button>
-            {canDeleteCurrentProduct ? (
-              <button type="button" className="shop-product__delete" onClick={handleDelete}>Delete product</button>
-            ) : null}
             {canArchiveCurrentProduct ? (
               <button
                 type="button"
@@ -337,6 +334,9 @@ export function ShopProductPage() {
               >
                 {product?.isActive ? `Archive product` : `Archived`}
               </button>
+            ) : null}
+            {canDeleteCurrentProduct ? (
+              <button type="button" className="shop-product__delete" onClick={handleDelete}>Delete product</button>
             ) : null}
           </div>
         ) : null}

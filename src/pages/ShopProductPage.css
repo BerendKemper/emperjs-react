@@ -184,6 +184,7 @@
 }
 
 .shop-product__delete {
+  margin-left: auto;
   background: #7f1d1d;
   border-color: #991b1b;
   color: #fff;
