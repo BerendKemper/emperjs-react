@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fetchShopFilters, fetchShopProductsPage } from "../../services/shopApi";
 import type { ShopFilterOption, ShopProduct } from "../../types/shop";
+import {
+  normalizeSelection,
+  parseCsvParam,
+  parseNullableNonNegativeIntParam,
+  parsePositiveIntParam
+} from "../../utils/searchParams";
 import { ShopCard } from "../ShopCard/ShopCard";
 import "./Shop.css";
 
@@ -58,25 +64,11 @@ const VALID_SORT_KEYS = new Set<SortKey>([
 ]);
 
 function normalizeTagSelection(tags: string[]): string[] {
-  return [...new Set(tags)].sort((a, b) => a.localeCompare(b));
+  return normalizeSelection(tags, { lowercase: true });
 }
 
 function normalizeIdSelection(values: string[]): string[] {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
-}
-
-function parsePositiveInt(raw: string | null, fallback: number): number {
-  if (!raw) return fallback;
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
-  return parsed;
-}
-
-function parseNullableNonNegativeInt(raw: string | null): number | null {
-  if (!raw?.trim()) return null;
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
-  return parsed;
+  return normalizeSelection(values, { lowercase: false });
 }
 
 function parseSortKey(raw: string | null): SortKey {
@@ -87,32 +79,22 @@ function parseSortKey(raw: string | null): SortKey {
 function parseAppliedFiltersFromSearchParams(searchParams: URLSearchParams): AppliedFilters {
   const tagsRaw = searchParams.get(`tags`);
   const tags = tagsRaw
-    ? normalizeTagSelection(
-      tagsRaw
-        .split(`,`)
-        .map(value => value.trim().toLowerCase())
-        .filter(Boolean)
-    )
+    ? parseCsvParam(tagsRaw, { lowercase: true })
     : [];
   const authorsRaw = searchParams.get(`authors`);
   const authorUserIds = authorsRaw
-    ? normalizeIdSelection(
-      authorsRaw
-        .split(`,`)
-        .map(value => value.trim())
-        .filter(Boolean)
-    )
+    ? parseCsvParam(authorsRaw, { lowercase: false })
     : [];
 
   return {
     search: searchParams.get(`search`)?.trim() ?? ``,
     selectedTags: tags,
     selectedAuthorUserIds: authorUserIds,
-    minPriceCents: parseNullableNonNegativeInt(searchParams.get(`minPriceCents`)),
-    maxPriceCents: parseNullableNonNegativeInt(searchParams.get(`maxPriceCents`)),
+    minPriceCents: parseNullableNonNegativeIntParam(searchParams.get(`minPriceCents`)),
+    maxPriceCents: parseNullableNonNegativeIntParam(searchParams.get(`maxPriceCents`)),
     sortBy: parseSortKey(searchParams.get(`sortBy`)),
-    page: parsePositiveInt(searchParams.get(`page`), 1),
-    pageSize: parsePositiveInt(searchParams.get(`pageSize`), 24),
+    page: parsePositiveIntParam(searchParams.get(`page`), 1),
+    pageSize: parsePositiveIntParam(searchParams.get(`pageSize`), 24),
   };
 }
 

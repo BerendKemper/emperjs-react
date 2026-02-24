@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
 import { useSession } from "../controls/Auth/useSession";
 import { fetchSellerProfileRequests, updateSellerProfileRequest, type SellerProfileRequest } from "../services/sellerProfileApi";
 import { fetchAdminUsersPage, type UsersApiRecord } from "../services/usersApi";
+import { normalizeSelection, parseCsvParam, parsePositiveIntParam } from "../utils/searchParams";
 import "./AdminUsersPage.css";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
@@ -49,6 +51,16 @@ const DEFAULT_PAGE_STATE: PageState = {
   hasNext: false,
 };
 
+const DEFAULT_USER_FILTERS: UserFilters = {
+  name: ``,
+  email: ``,
+  emailProviders: [],
+  roles: [],
+  sellerProfile: ``,
+  page: 1,
+  pageSize: 24,
+};
+
 type EmailProviderConnectionRecord = {
   id: string;
   scope_type: `system` | `seller_profile`;
@@ -76,9 +88,6 @@ const equalsRoleLists = (a: string[], b: string[]): boolean => {
   return left.every((role, index) => role === right[index]);
 };
 
-const normalizeSelection = (values: string[]): string[] =>
-  [...new Set(values.map(value => value.trim().toLowerCase()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-
 const areUserFiltersEqual = (a: UserFilters, b: UserFilters): boolean => (
   a.name.trim() === b.name.trim() &&
   a.email.trim() === b.email.trim() &&
@@ -89,28 +98,52 @@ const areUserFiltersEqual = (a: UserFilters, b: UserFilters): boolean => (
   a.pageSize === b.pageSize
 );
 
+function parseUserFiltersFromSearchParams(searchParams: URLSearchParams): UserFilters {
+  return {
+    name: searchParams.get(`name`)?.trim() ?? ``,
+    email: searchParams.get(`email`)?.trim() ?? ``,
+    emailProviders: parseCsvParam(searchParams.get(`emailProviders`), { lowercase: true }),
+    roles: parseCsvParam(searchParams.get(`roles`), { lowercase: true }),
+    sellerProfile: searchParams.get(`sellerProfile`)?.trim() ?? ``,
+    page: parsePositiveIntParam(searchParams.get(`page`), 1),
+    pageSize: parsePositiveIntParam(searchParams.get(`pageSize`), 24),
+  };
+}
+
+function buildSearchParamsFromUserFilters(filters: UserFilters): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (filters.name) params.set(`name`, filters.name);
+  if (filters.email) params.set(`email`, filters.email);
+  if (filters.emailProviders.length > 0) params.set(`emailProviders`, filters.emailProviders.join(`,`));
+  if (filters.roles.length > 0) params.set(`roles`, filters.roles.join(`,`));
+  if (filters.sellerProfile) params.set(`sellerProfile`, filters.sellerProfile);
+  if (filters.page !== 1) params.set(`page`, String(filters.page));
+  if (filters.pageSize !== 24) params.set(`pageSize`, String(filters.pageSize));
+
+  return params;
+}
+
 export function AdminUsersPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialUserFilters = useMemo(
+    () => parseUserFiltersFromSearchParams(searchParams),
+    [searchParams]
+  );
   const { session, isLoading } = useSession();
-  const [activeTab, setActiveTab] = useState<AdminTab>(`sellerProfiles`);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [pageState, setPageState] = useState<PageState>(DEFAULT_PAGE_STATE);
   const [availableEmailProviders, setAvailableEmailProviders] = useState<string[]>([]);
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
-  const [draftName, setDraftName] = useState(``);
-  const [draftEmail, setDraftEmail] = useState(``);
-  const [draftSellerProfile, setDraftSellerProfile] = useState(``);
-  const [draftEmailProviders, setDraftEmailProviders] = useState<string[]>([]);
-  const [draftRolesFilter, setDraftRolesFilter] = useState<string[]>([]);
-  const [draftPageSize, setDraftPageSize] = useState(24);
-  const [appliedUserFilters, setAppliedUserFilters] = useState<UserFilters>({
-    name: ``,
-    email: ``,
-    emailProviders: [],
-    roles: [],
-    sellerProfile: ``,
-    page: 1,
-    pageSize: 24,
-  });
+  const [draftName, setDraftName] = useState(initialUserFilters.name);
+  const [draftEmail, setDraftEmail] = useState(initialUserFilters.email);
+  const [draftSellerProfile, setDraftSellerProfile] = useState(initialUserFilters.sellerProfile);
+  const [draftEmailProviders, setDraftEmailProviders] = useState<string[]>(initialUserFilters.emailProviders);
+  const [draftRolesFilter, setDraftRolesFilter] = useState<string[]>(initialUserFilters.roles);
+  const [draftPageSize, setDraftPageSize] = useState(initialUserFilters.pageSize);
+  const [appliedUserFilters, setAppliedUserFilters] = useState<UserFilters>(initialUserFilters);
   const [roleDrafts, setRoleDrafts] = useState<Record<string, ManagedRole[]>>({});
   const [savingByUserId, setSavingByUserId] = useState<Record<string, boolean>>({});
   const [isUsersLoading, setIsUsersLoading] = useState(false);
@@ -135,12 +168,34 @@ export function AdminUsersPage() {
   const isOwner = Boolean(session?.roles?.includes(`owner`));
   const isAdmin = Boolean(session?.roles?.includes(`admin`));
   const canManageUsers = isOwner || isAdmin;
+  const activeTab: AdminTab = location.pathname === `/admin/users` ? `users` : `sellerProfiles`;
 
   const allowedManagedRoles = useMemo<ManagedRole[]>(() => {
     if (isOwner) return [...OWNER_MANAGED_ROLES];
     if (isAdmin) return [...ADMIN_MANAGED_ROLES];
     return [];
   }, [isAdmin, isOwner]);
+
+  useEffect(() => {
+    if (activeTab !== `users`) return;
+    const fromUrl = parseUserFiltersFromSearchParams(searchParams);
+    setAppliedUserFilters(current => (areUserFiltersEqual(current, fromUrl) ? current : fromUrl));
+    setDraftName(fromUrl.name);
+    setDraftEmail(fromUrl.email);
+    setDraftSellerProfile(fromUrl.sellerProfile);
+    setDraftEmailProviders(fromUrl.emailProviders);
+    setDraftRolesFilter(fromUrl.roles);
+    setDraftPageSize(fromUrl.pageSize);
+  }, [activeTab, searchParams]);
+
+  useEffect(() => {
+    if (activeTab !== `users`) return;
+    const next = buildSearchParamsFromUserFilters(appliedUserFilters).toString();
+    const current = searchParams.toString();
+    if (next !== current) {
+      setSearchParams(next, { replace: false });
+    }
+  }, [activeTab, appliedUserFilters, searchParams, setSearchParams]);
 
   const mapApiUser = (user: UsersApiRecord): UserRecord => ({
     id: user.id,
@@ -471,15 +526,7 @@ export function AdminUsersPage() {
     setDraftEmailProviders([]);
     setDraftRolesFilter([]);
     setDraftPageSize(24);
-    setAppliedUserFilters({
-      name: ``,
-      email: ``,
-      emailProviders: [],
-      roles: [],
-      sellerProfile: ``,
-      page: 1,
-      pageSize: 24,
-    });
+    setAppliedUserFilters({ ...DEFAULT_USER_FILTERS });
   };
 
   const goToUsersPage = (nextPage: number) => {
@@ -546,14 +593,14 @@ export function AdminUsersPage() {
         <button
           type="button"
           className={activeTab === `sellerProfiles` ? `is-active` : ``}
-          onClick={() => setActiveTab(`sellerProfiles`)}
+          onClick={() => navigate(`/admin/seller-profiles`)}
         >
           Seller Profiles
         </button>
         <button
           type="button"
           className={activeTab === `users` ? `is-active` : ``}
-          onClick={() => setActiveTab(`users`)}
+          onClick={() => navigate(`/admin/users`)}
         >
           Users
         </button>
@@ -945,4 +992,3 @@ export function AdminUsersPage() {
     </section>
   );
 }
-
