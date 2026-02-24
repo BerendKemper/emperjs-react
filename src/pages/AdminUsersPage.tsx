@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
 import { useSession } from "../controls/Auth/useSession";
+import { fetchSellerProfileRequests, updateSellerProfileRequest, type SellerProfileRequest } from "../services/sellerProfileApi";
 import "./AdminUsersPage.css";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
@@ -73,6 +74,11 @@ export function AdminUsersPage() {
   const [systemSenderEmail, setSystemSenderEmail] = useState(``);
   const [systemSenderName, setSystemSenderName] = useState(``);
   const [systemStatus, setSystemStatus] = useState<`active` | `inactive`>(`active`);
+  const [requestFilterStatus, setRequestFilterStatus] = useState(`pending`);
+  const [sellerRequests, setSellerRequests] = useState<SellerProfileRequest[]>([]);
+  const [isRequestsLoading, setIsRequestsLoading] = useState(false);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+  const [requestActionBusyById, setRequestActionBusyById] = useState<Record<string, boolean>>({});
 
   const isAuthenticated = Boolean(session?.authenticated);
   const isOwner = Boolean(session?.roles?.includes(`owner`));
@@ -188,6 +194,37 @@ export function AdminUsersPage() {
   useEffect(() => {
     void loadSystemEmailConnection();
   }, [isAuthenticated, canManageUsers]);
+
+  const loadSellerProfileRequests = async () => {
+    if (!isAuthenticated || !canManageUsers) {
+      setSellerRequests([]);
+      setRequestsError(null);
+      setIsRequestsLoading(false);
+      return;
+    }
+
+    setIsRequestsLoading(true);
+    setRequestsError(null);
+    try {
+      const payload = await fetchSellerProfileRequests({
+        status: requestFilterStatus || undefined,
+        page: 1,
+        pageSize: 50,
+      });
+      setSellerRequests(payload.requests);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : `Failed to load seller profile requests.`;
+      setSellerRequests([]);
+      setRequestsError(message);
+    } finally {
+      setIsRequestsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== `sellerProfiles`) return;
+    void loadSellerProfileRequests();
+  }, [isAuthenticated, canManageUsers, requestFilterStatus, activeTab]);
 
   const filteredUsers = useMemo(() => {
     if (!query) {
@@ -308,6 +345,23 @@ export function AdminUsersPage() {
     }
   };
 
+  const handleRequestAction = async (
+    requestId: string,
+    action: `approve` | `reject` | `cancel`
+  ) => {
+    setRequestActionBusyById(previous => ({ ...previous, [requestId]: true }));
+    setRequestsError(null);
+    try {
+      await updateSellerProfileRequest(requestId, action);
+      await loadSellerProfileRequests();
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : `Failed to update seller profile request.`;
+      setRequestsError(message);
+    } finally {
+      setRequestActionBusyById(previous => ({ ...previous, [requestId]: false }));
+    }
+  };
+
   if (isLoading) {
     return (
       <section className="admin-users">
@@ -369,6 +423,68 @@ export function AdminUsersPage() {
 
       {activeTab === `sellerProfiles` ? (
         <div className="admin-users__seller-profiles">
+          <section className="admin-users__card">
+            <h2>Seller profile requests</h2>
+            <p>Review pending seller-profile creation requests.</p>
+            <label className="admin-users__field">
+              <span>Status filter</span>
+              <select
+                value={requestFilterStatus}
+                onChange={event => setRequestFilterStatus(event.target.value)}
+              >
+                <option value="pending">pending</option>
+                <option value="approved">approved</option>
+                <option value="rejected">rejected</option>
+                <option value="cancelled">cancelled</option>
+                <option value="expired">expired</option>
+              </select>
+            </label>
+            {requestsError ? <p className="admin-users__error">{requestsError}</p> : null}
+            {isRequestsLoading ? <p>Loading requests...</p> : null}
+            {!isRequestsLoading && sellerRequests.length === 0 ? <p>No requests found.</p> : null}
+            {!isRequestsLoading && sellerRequests.length > 0 ? (
+              <div className="admin-users__table">
+                <div className="admin-users__row admin-users__row--header admin-users__row--requests">
+                  <span>Slug</span>
+                  <span>Display name</span>
+                  <span>Status</span>
+                  <span>Requested</span>
+                  <span>Actions</span>
+                </div>
+                {sellerRequests.map(request => {
+                  const isBusy = Boolean(requestActionBusyById[request.id]);
+                  const canAct = request.status === `pending`;
+                  return (
+                    <div key={request.id} className="admin-users__row admin-users__row--requests">
+                      <span>{request.requested_slug}</span>
+                      <span>{request.requested_display_name}</span>
+                      <span>{request.status}</span>
+                      <span>{new Date(request.created_at).toLocaleString()}</span>
+                      <span className="admin-users__role-actions">
+                        <button
+                          type="button"
+                          className="admin-users__button admin-users__button--primary"
+                          disabled={!canAct || isBusy}
+                          onClick={() => void handleRequestAction(request.id, `approve`)}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-users__button admin-users__button--secondary"
+                          disabled={!canAct || isBusy}
+                          onClick={() => void handleRequestAction(request.id, `reject`)}
+                        >
+                          Reject
+                        </button>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
+
           <section className="admin-users__card">
             <h2>System email provider</h2>
             <p>This is the global fallback sender for platform notifications. Seller-profile scoped providers will be added in the next slice.</p>

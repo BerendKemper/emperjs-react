@@ -5,6 +5,7 @@ import { ShopPage } from "../../pages/ShopPage";
 import { ShopProductPage } from "../../pages/ShopProductPage";
 import { UserSettingsPage } from "../../pages/UserSettingsPage";
 import { AdminUsersPage } from "../../pages/AdminUsersPage";
+import { SellerProfilePage } from "../../pages/SellerProfilePage";
 import { useSession } from "../../controls/Auth/useSession";
 import "./Router.css";
 
@@ -26,6 +27,7 @@ export function Router() {
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/shop/products/:slug" element={<ShopProductPage />} />
           {isAuthenticated ? <Route path="/settings" element={<UserSettingsPage />} /> : null}
+          {isAuthenticated ? <Route path="/seller-profile" element={<SellerProfilePage />} /> : null}
           {isAuthenticated && isAdmin ? <Route path="/admin" element={<AdminUsersPage />} /> : null}
           {isAuthenticated && canManageProducts ? <Route path="/shop/products/new" element={<ShopProductPage />} /> : null}
           <Route path="*" element={<Navigate to="/" replace />} />

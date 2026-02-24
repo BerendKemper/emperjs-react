@@ -1,0 +1,113 @@
+.seller-profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 0 48px;
+}
+
+.seller-profile-page__grid {
+  display: grid;
+  gap: 16px;
+}
+
+.seller-profile-page__card {
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 16px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.seller-profile-page__card h2 {
+  margin: 0;
+}
+
+.seller-profile-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.seller-profile-page__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.seller-profile-page__form input,
+.seller-profile-page__form textarea,
+.seller-profile-page__form select {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: transparent;
+  padding: 10px 12px;
+  color: inherit;
+}
+
+.seller-profile-page__form button {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: white;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.seller-profile-page__checkbox {
+  flex-direction: row !important;
+  align-items: center;
+}
+
+.seller-profile-page__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.seller-profile-page__list li {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.seller-profile-page__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.role-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status {
+  margin: 0;
+}
+
+.status--success {
+  color: #38a169;
+}
+
+.status--error {
+  color: #e53e3e;
+}
+
+.status--saving {
+  color: var(--text-secondary);
+}
