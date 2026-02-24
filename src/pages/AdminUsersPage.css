@@ -46,6 +46,17 @@
   font-size: 1.2rem;
 }
 
+.admin-users__filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-users__filter-group p {
+  margin: 0;
+  font-weight: 600;
+}
+
 .admin-users__field {
   display: flex;
   flex-direction: column;
@@ -237,6 +248,14 @@
 .admin-users__button--secondary {
   background: transparent;
   color: inherit;
+}
+
+.admin-users__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .admin-users__hint {

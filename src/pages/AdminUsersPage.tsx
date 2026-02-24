@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
 import { useSession } from "../controls/Auth/useSession";
 import { fetchSellerProfileRequests, updateSellerProfileRequest, type SellerProfileRequest } from "../services/sellerProfileApi";
+import { fetchAdminUsersPage, type UsersApiRecord } from "../services/usersApi";
 import "./AdminUsersPage.css";
 
 const AUTH_API_ORIGIN = import.meta.env.VITE_AUTH_API_ORIGIN;
@@ -20,12 +21,32 @@ type UserRecord = {
   status: `active` | `disabled`;
 };
 
-type UsersApiRecord = {
-  id: string;
+type PageState = {
+  index: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+};
+
+type UserFilters = {
+  name: string;
   email: string;
-  display_name: string | null;
+  emailProviders: string[];
   roles: string[];
-  is_active: number;
+  sellerProfile: string;
+  page: number;
+  pageSize: number;
+};
+
+const DEFAULT_PAGE_STATE: PageState = {
+  index: 1,
+  size: 24,
+  totalItems: 0,
+  totalPages: 0,
+  hasPrev: false,
+  hasNext: false,
 };
 
 type EmailProviderConnectionRecord = {
@@ -55,11 +76,41 @@ const equalsRoleLists = (a: string[], b: string[]): boolean => {
   return left.every((role, index) => role === right[index]);
 };
 
+const normalizeSelection = (values: string[]): string[] =>
+  [...new Set(values.map(value => value.trim().toLowerCase()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+const areUserFiltersEqual = (a: UserFilters, b: UserFilters): boolean => (
+  a.name.trim() === b.name.trim() &&
+  a.email.trim() === b.email.trim() &&
+  a.sellerProfile.trim() === b.sellerProfile.trim() &&
+  normalizeSelection(a.emailProviders).join(`,`) === normalizeSelection(b.emailProviders).join(`,`) &&
+  normalizeSelection(a.roles).join(`,`) === normalizeSelection(b.roles).join(`,`) &&
+  a.page === b.page &&
+  a.pageSize === b.pageSize
+);
+
 export function AdminUsersPage() {
   const { session, isLoading } = useSession();
   const [activeTab, setActiveTab] = useState<AdminTab>(`sellerProfiles`);
-  const [query, setQuery] = useState(``);
   const [users, setUsers] = useState<UserRecord[]>([]);
+  const [pageState, setPageState] = useState<PageState>(DEFAULT_PAGE_STATE);
+  const [availableEmailProviders, setAvailableEmailProviders] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [draftName, setDraftName] = useState(``);
+  const [draftEmail, setDraftEmail] = useState(``);
+  const [draftSellerProfile, setDraftSellerProfile] = useState(``);
+  const [draftEmailProviders, setDraftEmailProviders] = useState<string[]>([]);
+  const [draftRolesFilter, setDraftRolesFilter] = useState<string[]>([]);
+  const [draftPageSize, setDraftPageSize] = useState(24);
+  const [appliedUserFilters, setAppliedUserFilters] = useState<UserFilters>({
+    name: ``,
+    email: ``,
+    emailProviders: [],
+    roles: [],
+    sellerProfile: ``,
+    page: 1,
+    pageSize: 24,
+  });
   const [roleDrafts, setRoleDrafts] = useState<Record<string, ManagedRole[]>>({});
   const [savingByUserId, setSavingByUserId] = useState<Record<string, boolean>>({});
   const [isUsersLoading, setIsUsersLoading] = useState(false);
@@ -116,6 +167,9 @@ export function AdminUsersPage() {
   const loadUsers = async () => {
     if (!isAuthenticated || !canManageUsers) {
       setUsers([]);
+      setPageState(DEFAULT_PAGE_STATE);
+      setAvailableEmailProviders([]);
+      setAvailableRoles([]);
       setRoleDrafts({});
       setUsersError(null);
       setIsUsersLoading(false);
@@ -126,18 +180,20 @@ export function AdminUsersPage() {
     setUsersError(null);
 
     try {
-      const response = await fetch(`${AUTH_API_ORIGIN}/users`, {
-        method: `GET`,
-        credentials: `include`,
+      const payload = await fetchAdminUsersPage({
+        name: appliedUserFilters.name,
+        email: appliedUserFilters.email,
+        sellerProfile: appliedUserFilters.sellerProfile,
+        emailProviders: appliedUserFilters.emailProviders,
+        roles: appliedUserFilters.roles,
+        page: appliedUserFilters.page,
+        pageSize: appliedUserFilters.pageSize,
       });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      const payload = (await response.json()) as { users?: UsersApiRecord[] };
       const nextUsers = (payload.users ?? []).map(mapApiUser);
       setUsers(nextUsers);
+      setPageState(payload.page ?? DEFAULT_PAGE_STATE);
+      setAvailableEmailProviders(normalizeSelection(payload.filters?.emailProviders ?? []));
+      setAvailableRoles(normalizeSelection(payload.filters?.roles ?? []));
 
       const nextDrafts: Record<string, ManagedRole[]> = {};
       for (const user of nextUsers) {
@@ -147,6 +203,7 @@ export function AdminUsersPage() {
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : `Failed to load users.`;
       setUsers([]);
+      setPageState(DEFAULT_PAGE_STATE);
       setRoleDrafts({});
       setUsersError(message);
     } finally {
@@ -156,7 +213,7 @@ export function AdminUsersPage() {
 
   useEffect(() => {
     void loadUsers();
-  }, [isAuthenticated, canManageUsers, allowedManagedRoles.join(`,`)]);
+  }, [isAuthenticated, canManageUsers, allowedManagedRoles.join(`,`), appliedUserFilters]);
 
   const loadSystemEmailConnection = async () => {
     if (!isAuthenticated || !canManageUsers) {
@@ -226,16 +283,33 @@ export function AdminUsersPage() {
     void loadSellerProfileRequests();
   }, [isAuthenticated, canManageUsers, requestFilterStatus, activeTab]);
 
-  const filteredUsers = useMemo(() => {
-    if (!query) {
-      return users;
-    }
+  const visibleEmailProviders = useMemo(
+    () => normalizeSelection([...availableEmailProviders, ...draftEmailProviders]),
+    [availableEmailProviders, draftEmailProviders]
+  );
 
-    const normalizedQuery = query.toLowerCase();
-    return users.filter(user =>
-      [user.name, user.email, user.roles.join(` `)].some(value => value.toLowerCase().includes(normalizedQuery))
-    );
-  }, [query, users]);
+  const visibleRoleFilters = useMemo(
+    () => normalizeSelection([...availableRoles, ...draftRolesFilter]),
+    [availableRoles, draftRolesFilter]
+  );
+
+  const hasPendingUserFilterChanges = useMemo(() => !areUserFiltersEqual(appliedUserFilters, {
+    name: draftName,
+    email: draftEmail,
+    emailProviders: draftEmailProviders,
+    roles: draftRolesFilter,
+    sellerProfile: draftSellerProfile,
+    page: appliedUserFilters.page,
+    pageSize: draftPageSize,
+  }), [
+    appliedUserFilters,
+    draftEmail,
+    draftEmailProviders,
+    draftName,
+    draftPageSize,
+    draftRolesFilter,
+    draftSellerProfile
+  ]);
 
   const toggleManagedRole = (userId: string, role: ManagedRole, checked: boolean) => {
     setRoleDrafts(previous => {
@@ -361,6 +435,70 @@ export function AdminUsersPage() {
       setRequestActionBusyById(previous => ({ ...previous, [requestId]: false }));
     }
   };
+
+  const toggleEmailProviderFilter = (provider: string) => {
+    setDraftEmailProviders(previous => (
+      previous.includes(provider)
+        ? previous.filter(value => value !== provider)
+        : [...previous, provider]
+    ));
+  };
+
+  const toggleRoleFilter = (role: string) => {
+    setDraftRolesFilter(previous => (
+      previous.includes(role)
+        ? previous.filter(value => value !== role)
+        : [...previous, role]
+    ));
+  };
+
+  const applyUserFilters = () => {
+    setAppliedUserFilters({
+      name: draftName.trim(),
+      email: draftEmail.trim(),
+      emailProviders: normalizeSelection(draftEmailProviders),
+      roles: normalizeSelection(draftRolesFilter),
+      sellerProfile: draftSellerProfile.trim(),
+      page: 1,
+      pageSize: draftPageSize,
+    });
+  };
+
+  const clearUserFilters = () => {
+    setDraftName(``);
+    setDraftEmail(``);
+    setDraftSellerProfile(``);
+    setDraftEmailProviders([]);
+    setDraftRolesFilter([]);
+    setDraftPageSize(24);
+    setAppliedUserFilters({
+      name: ``,
+      email: ``,
+      emailProviders: [],
+      roles: [],
+      sellerProfile: ``,
+      page: 1,
+      pageSize: 24,
+    });
+  };
+
+  const goToUsersPage = (nextPage: number) => {
+    if (nextPage < 1 || (pageState.totalPages > 0 && nextPage > pageState.totalPages)) return;
+    setAppliedUserFilters(previous => ({ ...previous, page: nextPage }));
+  };
+
+  const userPageIndexes = useMemo(() => {
+    if (pageState.totalPages <= 0) return [];
+    const maxButtons = 8;
+    const half = Math.floor(maxButtons / 2);
+    let start = Math.max(1, pageState.index - half);
+    let end = start + maxButtons - 1;
+    if (end > pageState.totalPages) {
+      end = pageState.totalPages;
+      start = Math.max(1, end - maxButtons + 1);
+    }
+    return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
+  }, [pageState.index, pageState.totalPages]);
 
   if (isLoading) {
     return (
@@ -577,16 +715,100 @@ export function AdminUsersPage() {
           <aside className="admin-users__filters">
             <h2>Filters</h2>
             <label className="admin-users__field">
-              <span>Search users</span>
+              <span>Name</span>
               <input
-                type="search"
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                placeholder="Search by name, email, role"
+                type="text"
+                value={draftName}
+                onChange={event => setDraftName(event.target.value)}
+                placeholder="Display name"
               />
             </label>
+            <label className="admin-users__field">
+              <span>Email</span>
+              <input
+                type="text"
+                value={draftEmail}
+                onChange={event => setDraftEmail(event.target.value)}
+                placeholder="user@example.com"
+              />
+            </label>
+            <label className="admin-users__field">
+              <span>Seller profile</span>
+              <input
+                type="text"
+                value={draftSellerProfile}
+                onChange={event => setDraftSellerProfile(event.target.value)}
+                placeholder="Slug or display name"
+              />
+            </label>
+            <label className="admin-users__field">
+              <span>Page size</span>
+              <select
+                value={draftPageSize}
+                onChange={event => setDraftPageSize(Number(event.target.value))}
+              >
+                <option value={12}>12</option>
+                <option value={24}>24</option>
+                <option value={48}>48</option>
+              </select>
+            </label>
+            <div className="admin-users__filter-group">
+              <p>Email providers</p>
+              {visibleEmailProviders.length === 0 ? (
+                <span className="admin-users__hint">No providers found for current text filters.</span>
+              ) : (
+                <div className="admin-users__checkboxes">
+                  {visibleEmailProviders.map(provider => (
+                    <label key={provider} className="admin-users__checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={draftEmailProviders.includes(provider)}
+                        onChange={() => toggleEmailProviderFilter(provider)}
+                      />
+                      <span>{provider}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="admin-users__filter-group">
+              <p>Roles</p>
+              {visibleRoleFilters.length === 0 ? (
+                <span className="admin-users__hint">No roles found for current text filters.</span>
+              ) : (
+                <div className="admin-users__checkboxes">
+                  {visibleRoleFilters.map(role => (
+                    <label key={role} className="admin-users__checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={draftRolesFilter.includes(role)}
+                        onChange={() => toggleRoleFilter(role)}
+                      />
+                      <span>{role}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="admin-users__role-actions">
+              <button
+                type="button"
+                className="admin-users__button admin-users__button--primary"
+                disabled={isUsersLoading || !hasPendingUserFilterChanges}
+                onClick={applyUserFilters}
+              >
+                {isUsersLoading ? `Applying...` : `Apply filters`}
+              </button>
+              <button
+                type="button"
+                className="admin-users__button admin-users__button--secondary"
+                onClick={clearUserFilters}
+              >
+                Reset filters
+              </button>
+            </div>
             <div className="admin-users__notes">
-              <p>Filter results update as you type.</p>
+              <p>Filters are server-side and update SQL results when you apply.</p>
               <p>You cannot edit your own roles or any owner account.</p>
             </div>
           </aside>
@@ -594,8 +816,11 @@ export function AdminUsersPage() {
           <div className="admin-users__list">
             <div className="admin-users__list-header">
               <h2>Users</h2>
-              <span>{filteredUsers.length} total</span>
+              <span>{pageState.totalItems} total</span>
             </div>
+            <p className="admin-users__hint">
+              {pageState.totalPages > 0 ? `Page ${pageState.index} of ${pageState.totalPages}` : `No pages`}
+            </p>
 
             {isUsersLoading ? (
               <div className="admin-users__empty">
@@ -606,7 +831,7 @@ export function AdminUsersPage() {
                 <p>Unable to process users request.</p>
                 <p>{usersError}</p>
               </div>
-            ) : filteredUsers.length === 0 ? (
+            ) : users.length === 0 ? (
               <div className="admin-users__empty">
                 <p>No users to display yet.</p>
                 <p>Try changing your filters.</p>
@@ -619,7 +844,7 @@ export function AdminUsersPage() {
                   <span>Roles</span>
                   <span>Status</span>
                 </div>
-                {filteredUsers.map(user => {
+                {users.map(user => {
                   const isSelf = user.id === session?.userId;
                   const isOwnerTarget = user.roles.includes(`owner`);
                   const canEditRow = !isSelf && !isOwnerTarget && allowedManagedRoles.length > 0;
@@ -682,9 +907,42 @@ export function AdminUsersPage() {
                 })}
               </div>
             )}
+
+            {pageState.totalPages > 1 ? (
+              <div className="admin-users__pagination">
+                <button
+                  type="button"
+                  className="admin-users__button admin-users__button--secondary"
+                  onClick={() => goToUsersPage(pageState.index - 1)}
+                  disabled={!pageState.hasPrev || isUsersLoading}
+                >
+                  Previous
+                </button>
+                {userPageIndexes.map(page => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`admin-users__button ${page === pageState.index ? `admin-users__button--primary` : `admin-users__button--secondary`}`}
+                    onClick={() => goToUsersPage(page)}
+                    disabled={isUsersLoading}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="admin-users__button admin-users__button--secondary"
+                  onClick={() => goToUsersPage(pageState.index + 1)}
+                  disabled={!pageState.hasNext || isUsersLoading}
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
     </section>
   );
 }
+
