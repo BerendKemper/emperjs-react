@@ -26,7 +26,7 @@ export function Router() {
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/shop/products/:slug" element={<ShopProductPage />} />
           {isAuthenticated ? <Route path="/settings" element={<UserSettingsPage />} /> : null}
-          {isAuthenticated && isAdmin ? <Route path="/admin/users" element={<AdminUsersPage />} /> : null}
+          {isAuthenticated && isAdmin ? <Route path="/admin" element={<AdminUsersPage />} /> : null}
           {isAuthenticated && canManageProducts ? <Route path="/shop/products/new" element={<ShopProductPage />} /> : null}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
@@ -34,4 +34,3 @@ export function Router() {
     </BrowserRouter>
   );
 }
-

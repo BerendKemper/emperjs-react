@@ -19,10 +19,9 @@ export function Header() {
         <Link to="/shop">Shop</Link>
         {!isLoading && isAuthenticated && canManageProducts ? <Link to="/shop/products/new">New Product</Link> : null}
         {!isLoading && isAuthenticated ? <Link to="/settings">Settings</Link> : null}
-        {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin/users">Users</Link> : null}
+        {!isLoading && isAuthenticated && isAdmin ? <Link to="/admin">Admin</Link> : null}
       </div>
       <LoginButtons />
     </nav>
   );
 }
-

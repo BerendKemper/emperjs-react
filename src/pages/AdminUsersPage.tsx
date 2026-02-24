@@ -8,6 +8,8 @@ const OWNER_MANAGED_ROLES = [`admin`, `seller`, `tester`] as const;
 const ADMIN_MANAGED_ROLES = [`seller`] as const;
 
 type ManagedRole = `admin` | `seller` | `tester`;
+type AdminTab = `sellerProfiles` | `users`;
+type EmailProvider = `google` | `microsoft`;
 
 type UserRecord = {
   id: string;
@@ -25,6 +27,23 @@ type UsersApiRecord = {
   is_active: number;
 };
 
+type EmailProviderConnectionRecord = {
+  id: string;
+  scope_type: `system` | `seller_profile`;
+  scope_id: string;
+  provider: EmailProvider;
+  account_email: string | null;
+  sender_email: string | null;
+  sender_name: string | null;
+  status: `active` | `inactive`;
+  created_at: number;
+  updated_at: number;
+};
+
+type SystemEmailProviderPayload = {
+  connection: EmailProviderConnectionRecord | null;
+};
+
 const normalizeRoles = (roles: string[]): string[] =>
   [...new Set(roles.map(role => role.trim().toLowerCase()).filter(Boolean))].sort();
 
@@ -37,12 +56,23 @@ const equalsRoleLists = (a: string[], b: string[]): boolean => {
 
 export function AdminUsersPage() {
   const { session, isLoading } = useSession();
+  const [activeTab, setActiveTab] = useState<AdminTab>(`sellerProfiles`);
   const [query, setQuery] = useState(``);
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [roleDrafts, setRoleDrafts] = useState<Record<string, ManagedRole[]>>({});
   const [savingByUserId, setSavingByUserId] = useState<Record<string, boolean>>({});
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [isSystemEmailLoading, setIsSystemEmailLoading] = useState(false);
+  const [isSystemEmailSaving, setIsSystemEmailSaving] = useState(false);
+  const [systemEmailError, setSystemEmailError] = useState<string | null>(null);
+  const [systemEmailNotice, setSystemEmailNotice] = useState<string | null>(null);
+  const [systemConnection, setSystemConnection] = useState<EmailProviderConnectionRecord | null>(null);
+  const [systemProvider, setSystemProvider] = useState<EmailProvider>(`microsoft`);
+  const [systemAccountEmail, setSystemAccountEmail] = useState(``);
+  const [systemSenderEmail, setSystemSenderEmail] = useState(``);
+  const [systemSenderName, setSystemSenderName] = useState(``);
+  const [systemStatus, setSystemStatus] = useState<`active` | `inactive`>(`active`);
 
   const isAuthenticated = Boolean(session?.authenticated);
   const isOwner = Boolean(session?.roles?.includes(`owner`));
@@ -62,6 +92,15 @@ export function AdminUsersPage() {
     roles: normalizeRoles(Array.isArray(user.roles) ? user.roles : []),
     status: user.is_active === 1 ? `active` : `disabled`,
   });
+
+  const syncSystemEmailForm = (connection: EmailProviderConnectionRecord | null) => {
+    setSystemConnection(connection);
+    setSystemProvider(connection?.provider ?? `microsoft`);
+    setSystemAccountEmail(connection?.account_email ?? ``);
+    setSystemSenderEmail(connection?.sender_email ?? ``);
+    setSystemSenderName(connection?.sender_name ?? ``);
+    setSystemStatus(connection?.status ?? `active`);
+  };
 
   const getManagedRolesForUser = (user: UserRecord): ManagedRole[] =>
     user.roles.filter((role): role is ManagedRole =>
@@ -112,6 +151,43 @@ export function AdminUsersPage() {
   useEffect(() => {
     void loadUsers();
   }, [isAuthenticated, canManageUsers, allowedManagedRoles.join(`,`)]);
+
+  const loadSystemEmailConnection = async () => {
+    if (!isAuthenticated || !canManageUsers) {
+      syncSystemEmailForm(null);
+      setSystemEmailError(null);
+      setSystemEmailNotice(null);
+      setIsSystemEmailLoading(false);
+      return;
+    }
+
+    setIsSystemEmailLoading(true);
+    setSystemEmailError(null);
+    setSystemEmailNotice(null);
+
+    try {
+      const response = await fetch(`${AUTH_API_ORIGIN}/admin/email-provider/system`, {
+        method: `GET`,
+        credentials: `include`,
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const payload = (await response.json()) as SystemEmailProviderPayload;
+      syncSystemEmailForm(payload.connection ?? null);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : `Failed to load system email provider settings.`;
+      syncSystemEmailForm(null);
+      setSystemEmailError(message);
+    } finally {
+      setIsSystemEmailLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadSystemEmailConnection();
+  }, [isAuthenticated, canManageUsers]);
 
   const filteredUsers = useMemo(() => {
     if (!query) {
@@ -176,6 +252,62 @@ export function AdminUsersPage() {
     }
   };
 
+  const handleSaveSystemEmailProvider = async () => {
+    if (!isOwner) return;
+    setIsSystemEmailSaving(true);
+    setSystemEmailError(null);
+    setSystemEmailNotice(null);
+
+    try {
+      const response = await fetch(`${AUTH_API_ORIGIN}/admin/email-provider/system`, {
+        method: `PUT`,
+        credentials: `include`,
+        headers: { "Content-Type": `application/json` },
+        body: JSON.stringify({
+          provider: systemProvider,
+          accountEmail: systemAccountEmail || null,
+          senderEmail: systemSenderEmail || null,
+          senderName: systemSenderName || null,
+          status: systemStatus,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const payload = (await response.json()) as SystemEmailProviderPayload;
+      syncSystemEmailForm(payload.connection ?? null);
+      setSystemEmailNotice(`System email provider settings saved.`);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : `Failed to save system email provider settings.`;
+      setSystemEmailError(message);
+    } finally {
+      setIsSystemEmailSaving(false);
+    }
+  };
+
+  const handleDisconnectSystemEmailProvider = async () => {
+    if (!isOwner) return;
+    setIsSystemEmailSaving(true);
+    setSystemEmailError(null);
+    setSystemEmailNotice(null);
+    try {
+      const response = await fetch(`${AUTH_API_ORIGIN}/admin/email-provider/system`, {
+        method: `DELETE`,
+        credentials: `include`,
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      syncSystemEmailForm(null);
+      setSystemEmailNotice(`System email provider settings removed.`);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : `Failed to remove system email provider settings.`;
+      setSystemEmailError(message);
+    } finally {
+      setIsSystemEmailSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <section className="admin-users">
@@ -190,7 +322,7 @@ export function AdminUsersPage() {
     return (
       <section className="admin-users">
         <header className="admin-users__header">
-          <h1>User admin</h1>
+          <h1>Admin</h1>
           <p>Sign in with an admin account to access user management.</p>
         </header>
         <div className="admin-users__signin">
@@ -204,7 +336,7 @@ export function AdminUsersPage() {
     return (
       <section className="admin-users">
         <header className="admin-users__header">
-          <h1>User admin</h1>
+          <h1>Admin</h1>
           <p>You do not have permission to view this page.</p>
         </header>
       </section>
@@ -214,121 +346,229 @@ export function AdminUsersPage() {
   return (
     <section className="admin-users">
       <header className="admin-users__header">
-        <h1>User admin</h1>
+        <h1>Admin</h1>
         <p>{isOwner ? `Owner can manage admin, seller and tester roles.` : `Admin can manage seller role only.`}</p>
       </header>
 
-      <div className="admin-users__layout">
-        <aside className="admin-users__filters">
-          <h2>Filters</h2>
-          <label className="admin-users__field">
-            <span>Search users</span>
-            <input
-              type="search"
-              value={query}
-              onChange={event => setQuery(event.target.value)}
-              placeholder="Search by name, email, role"
-            />
-          </label>
-          <div className="admin-users__notes">
-            <p>Filter results update as you type.</p>
-            <p>You cannot edit your own roles or any owner account.</p>
-          </div>
-        </aside>
-
-        <div className="admin-users__list">
-          <div className="admin-users__list-header">
-            <h2>Users</h2>
-            <span>{filteredUsers.length} total</span>
-          </div>
-
-          {isUsersLoading ? (
-            <div className="admin-users__empty">
-              <p>Loading users...</p>
-            </div>
-          ) : usersError ? (
-            <div className="admin-users__empty">
-              <p>Unable to process users request.</p>
-              <p>{usersError}</p>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="admin-users__empty">
-              <p>No users to display yet.</p>
-              <p>Try changing your filters.</p>
-            </div>
-          ) : (
-            <div className="admin-users__table">
-              <div className="admin-users__row admin-users__row--header">
-                <span>Name</span>
-                <span>Email</span>
-                <span>Roles</span>
-                <span>Status</span>
-              </div>
-              {filteredUsers.map(user => {
-                const isSelf = user.id === session?.userId;
-                const isOwnerTarget = user.roles.includes(`owner`);
-                const canEditRow = !isSelf && !isOwnerTarget && allowedManagedRoles.length > 0;
-                const currentManagedRoles = getManagedRolesForUser(user);
-                const draftManagedRoles = roleDrafts[user.id] ?? currentManagedRoles;
-                const isDirty = !equalsRoleLists(draftManagedRoles, currentManagedRoles);
-                const isSaving = Boolean(savingByUserId[user.id]);
-
-                return (
-                  <div key={user.id} className="admin-users__row">
-                    <span>{user.name}</span>
-                    <span>{user.email}</span>
-                    <span className="admin-users__roles admin-users__roles--editable">
-                      {user.roles.map(role => (
-                        <span key={role} className="role-pill">
-                          {role}
-                        </span>
-                      ))}
-                      {canEditRow ? (
-                        <div className="admin-users__role-editor">
-                          <div className="admin-users__checkboxes">
-                            {allowedManagedRoles.map(role => (
-                              <label key={`${user.id}-${role}`} className="admin-users__checkbox-label">
-                                <input
-                                  type="checkbox"
-                                  checked={draftManagedRoles.includes(role)}
-                                  onChange={event => toggleManagedRole(user.id, role, event.target.checked)}
-                                  disabled={isSaving}
-                                />
-                                <span>{role}</span>
-                              </label>
-                            ))}
-                          </div>
-                          <div className="admin-users__role-actions">
-                            <button
-                              type="button"
-                              onClick={() => handleResetRoles(user)}
-                              disabled={!isDirty || isSaving}
-                              className="admin-users__button admin-users__button--secondary"
-                            >
-                              Reset
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void handleSaveRoles(user)}
-                              disabled={!isDirty || isSaving}
-                              className="admin-users__button admin-users__button--primary"
-                            >
-                              {isSaving ? `Saving...` : `Save roles`}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="admin-users__hint">{isSelf ? `Self` : isOwnerTarget ? `Owner` : `Read-only`}</span>
-                      )}
-                    </span>
-                    <span className={`admin-users__status admin-users__status--${user.status}`}>{user.status}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      <div className="admin-users__tabs">
+        <button
+          type="button"
+          className={activeTab === `sellerProfiles` ? `is-active` : ``}
+          onClick={() => setActiveTab(`sellerProfiles`)}
+        >
+          Seller Profiles
+        </button>
+        <button
+          type="button"
+          className={activeTab === `users` ? `is-active` : ``}
+          onClick={() => setActiveTab(`users`)}
+        >
+          Users
+        </button>
       </div>
+
+      {activeTab === `sellerProfiles` ? (
+        <div className="admin-users__seller-profiles">
+          <section className="admin-users__card">
+            <h2>System email provider</h2>
+            <p>This is the global fallback sender for platform notifications. Seller-profile scoped providers will be added in the next slice.</p>
+            {isSystemEmailLoading ? <p>Loading settings...</p> : null}
+            {systemEmailError ? <p className="admin-users__error">{systemEmailError}</p> : null}
+            {systemEmailNotice ? <p className="admin-users__notice">{systemEmailNotice}</p> : null}
+
+            <label className="admin-users__field">
+              <span>Provider</span>
+              <select
+                value={systemProvider}
+                onChange={event => setSystemProvider(event.target.value as EmailProvider)}
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                <option value="microsoft">Microsoft</option>
+                <option value="google">Google</option>
+              </select>
+            </label>
+
+            <label className="admin-users__field">
+              <span>Account email</span>
+              <input
+                type="email"
+                value={systemAccountEmail}
+                onChange={event => setSystemAccountEmail(event.target.value)}
+                placeholder="owner@example.com"
+                disabled={!isOwner || isSystemEmailSaving}
+              />
+            </label>
+
+            <label className="admin-users__field">
+              <span>Sender email</span>
+              <input
+                type="email"
+                value={systemSenderEmail}
+                onChange={event => setSystemSenderEmail(event.target.value)}
+                placeholder="no-reply@example.com"
+                disabled={!isOwner || isSystemEmailSaving}
+              />
+            </label>
+
+            <label className="admin-users__field">
+              <span>Sender name</span>
+              <input
+                type="text"
+                value={systemSenderName}
+                onChange={event => setSystemSenderName(event.target.value)}
+                placeholder="EmperJS"
+                disabled={!isOwner || isSystemEmailSaving}
+              />
+            </label>
+
+            <label className="admin-users__field">
+              <span>Status</span>
+              <select
+                value={systemStatus}
+                onChange={event => setSystemStatus(event.target.value as `active` | `inactive`)}
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </select>
+            </label>
+
+            <div className="admin-users__role-actions">
+              <button
+                type="button"
+                onClick={() => void handleSaveSystemEmailProvider()}
+                className="admin-users__button admin-users__button--primary"
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                {isSystemEmailSaving ? `Saving...` : `Save provider`}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDisconnectSystemEmailProvider()}
+                className="admin-users__button admin-users__button--secondary"
+                disabled={!isOwner || !systemConnection || isSystemEmailSaving}
+              >
+                Remove provider
+              </button>
+            </div>
+            {!isOwner ? <p className="admin-users__hint">Read-only for admin users. Owner can edit this setting.</p> : null}
+          </section>
+        </div>
+      ) : null}
+
+      {activeTab === `users` ? (
+        <div className="admin-users__layout">
+          <aside className="admin-users__filters">
+            <h2>Filters</h2>
+            <label className="admin-users__field">
+              <span>Search users</span>
+              <input
+                type="search"
+                value={query}
+                onChange={event => setQuery(event.target.value)}
+                placeholder="Search by name, email, role"
+              />
+            </label>
+            <div className="admin-users__notes">
+              <p>Filter results update as you type.</p>
+              <p>You cannot edit your own roles or any owner account.</p>
+            </div>
+          </aside>
+
+          <div className="admin-users__list">
+            <div className="admin-users__list-header">
+              <h2>Users</h2>
+              <span>{filteredUsers.length} total</span>
+            </div>
+
+            {isUsersLoading ? (
+              <div className="admin-users__empty">
+                <p>Loading users...</p>
+              </div>
+            ) : usersError ? (
+              <div className="admin-users__empty">
+                <p>Unable to process users request.</p>
+                <p>{usersError}</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="admin-users__empty">
+                <p>No users to display yet.</p>
+                <p>Try changing your filters.</p>
+              </div>
+            ) : (
+              <div className="admin-users__table">
+                <div className="admin-users__row admin-users__row--header">
+                  <span>Name</span>
+                  <span>Email</span>
+                  <span>Roles</span>
+                  <span>Status</span>
+                </div>
+                {filteredUsers.map(user => {
+                  const isSelf = user.id === session?.userId;
+                  const isOwnerTarget = user.roles.includes(`owner`);
+                  const canEditRow = !isSelf && !isOwnerTarget && allowedManagedRoles.length > 0;
+                  const currentManagedRoles = getManagedRolesForUser(user);
+                  const draftManagedRoles = roleDrafts[user.id] ?? currentManagedRoles;
+                  const isDirty = !equalsRoleLists(draftManagedRoles, currentManagedRoles);
+                  const isSaving = Boolean(savingByUserId[user.id]);
+
+                  return (
+                    <div key={user.id} className="admin-users__row">
+                      <span>{user.name}</span>
+                      <span>{user.email}</span>
+                      <span className="admin-users__roles admin-users__roles--editable">
+                        {user.roles.map(role => (
+                          <span key={role} className="role-pill">
+                            {role}
+                          </span>
+                        ))}
+                        {canEditRow ? (
+                          <div className="admin-users__role-editor">
+                            <div className="admin-users__checkboxes">
+                              {allowedManagedRoles.map(role => (
+                                <label key={`${user.id}-${role}`} className="admin-users__checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={draftManagedRoles.includes(role)}
+                                    onChange={event => toggleManagedRole(user.id, role, event.target.checked)}
+                                    disabled={isSaving}
+                                  />
+                                  <span>{role}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <div className="admin-users__role-actions">
+                              <button
+                                type="button"
+                                onClick={() => handleResetRoles(user)}
+                                disabled={!isDirty || isSaving}
+                                className="admin-users__button admin-users__button--secondary"
+                              >
+                              Reset
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleSaveRoles(user)}
+                                disabled={!isDirty || isSaving}
+                                className="admin-users__button admin-users__button--primary"
+                              >
+                                {isSaving ? `Saving...` : `Save roles`}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="admin-users__hint">{isSelf ? `Self` : isOwnerTarget ? `Owner` : `Read-only`}</span>
+                        )}
+                      </span>
+                      <span className={`admin-users__status admin-users__status--${user.status}`}>{user.status}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -61,6 +61,65 @@
   color: inherit;
 }
 
+.admin-users__field select {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: transparent;
+  padding: 10px 12px;
+  color: inherit;
+}
+
+.admin-users__tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-users__tabs button {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: rgba(148, 163, 184, 0.08);
+  padding: 8px 12px;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-users__tabs button.is-active {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: white;
+}
+
+.admin-users__seller-profiles {
+  display: grid;
+}
+
+.admin-users__card {
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 16px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-users__card h2 {
+  margin: 0;
+}
+
+.admin-users__card p {
+  margin: 0;
+}
+
+.admin-users__error {
+  color: #e53e3e;
+}
+
+.admin-users__notice {
+  color: #38a169;
+}
+
 .admin-users__notes {
   font-size: 0.95rem;
   color: var(--text-secondary);
