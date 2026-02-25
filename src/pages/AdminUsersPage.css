@@ -101,6 +101,28 @@
   color: white;
 }
 
+.admin-users__provider-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-users__provider-button {
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: rgba(148, 163, 184, 0.08);
+  padding: 10px 12px;
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-users__provider-button.is-selected {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: white;
+}
+
 .admin-users__seller-profiles {
   display: grid;
 }

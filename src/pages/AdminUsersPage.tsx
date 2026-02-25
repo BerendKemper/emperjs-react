@@ -12,7 +12,7 @@ const OWNER_MANAGED_ROLES = [`admin`, `seller`, `tester`] as const;
 const ADMIN_MANAGED_ROLES = [`seller`] as const;
 
 type ManagedRole = `admin` | `seller` | `tester`;
-type AdminTab = `sellerProfiles` | `users`;
+type AdminTab = `sellerProfiles` | `users` | `settings`;
 type EmailProvider = `google` | `microsoft`;
 
 type UserRecord = {
@@ -168,7 +168,11 @@ export function AdminUsersPage() {
   const isOwner = Boolean(session?.roles?.includes(`owner`));
   const isAdmin = Boolean(session?.roles?.includes(`admin`));
   const canManageUsers = isOwner || isAdmin;
-  const activeTab: AdminTab = location.pathname === `/admin/users` ? `users` : `sellerProfiles`;
+  const activeTab: AdminTab = location.pathname === `/admin/users`
+    ? `users`
+    : location.pathname === `/admin/settings`
+      ? `settings`
+      : `sellerProfiles`;
 
   const allowedManagedRoles = useMemo<ManagedRole[]>(() => {
     if (isOwner) return [...OWNER_MANAGED_ROLES];
@@ -271,7 +275,7 @@ export function AdminUsersPage() {
   }, [isAuthenticated, canManageUsers, allowedManagedRoles.join(`,`), appliedUserFilters]);
 
   const loadSystemEmailConnection = async () => {
-    if (!isAuthenticated || !canManageUsers) {
+    if (!isAuthenticated || !isOwner || activeTab !== `settings`) {
       syncSystemEmailForm(null);
       setSystemEmailError(null);
       setSystemEmailNotice(null);
@@ -305,7 +309,7 @@ export function AdminUsersPage() {
 
   useEffect(() => {
     void loadSystemEmailConnection();
-  }, [isAuthenticated, canManageUsers]);
+  }, [isAuthenticated, isOwner, activeTab]);
 
   const loadSellerProfileRequests = async () => {
     if (!isAuthenticated || !canManageUsers) {
@@ -474,6 +478,13 @@ export function AdminUsersPage() {
     }
   };
 
+  const handleConnectProvider = (provider: EmailProvider) => {
+    if (!isOwner) return;
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const params = new URLSearchParams({ returnTo });
+    window.location.href = `${AUTH_API_ORIGIN}/admin/email-provider/system/connect/${provider}/start?${params.toString()}`;
+  };
+
   const handleRequestAction = async (
     requestId: string,
     action: `approve` | `reject` | `cancel`
@@ -604,6 +615,15 @@ export function AdminUsersPage() {
         >
           Users
         </button>
+        {isOwner ? (
+          <button
+            type="button"
+            className={activeTab === `settings` ? `is-active` : ``}
+            onClick={() => navigate(`/admin/settings`)}
+          >
+            Settings
+          </button>
+        ) : null}
       </div>
 
       {activeTab === `sellerProfiles` ? (
@@ -670,90 +690,6 @@ export function AdminUsersPage() {
             ) : null}
           </section>
 
-          <section className="admin-users__card">
-            <h2>System email provider</h2>
-            <p>This is the global fallback sender for platform notifications. Seller-profile scoped providers will be added in the next slice.</p>
-            {isSystemEmailLoading ? <p>Loading settings...</p> : null}
-            {systemEmailError ? <p className="admin-users__error">{systemEmailError}</p> : null}
-            {systemEmailNotice ? <p className="admin-users__notice">{systemEmailNotice}</p> : null}
-
-            <label className="admin-users__field">
-              <span>Provider</span>
-              <select
-                value={systemProvider}
-                onChange={event => setSystemProvider(event.target.value as EmailProvider)}
-                disabled={!isOwner || isSystemEmailSaving}
-              >
-                <option value="microsoft">Microsoft</option>
-                <option value="google">Google</option>
-              </select>
-            </label>
-
-            <label className="admin-users__field">
-              <span>Account email</span>
-              <input
-                type="email"
-                value={systemAccountEmail}
-                onChange={event => setSystemAccountEmail(event.target.value)}
-                placeholder="owner@example.com"
-                disabled={!isOwner || isSystemEmailSaving}
-              />
-            </label>
-
-            <label className="admin-users__field">
-              <span>Sender email</span>
-              <input
-                type="email"
-                value={systemSenderEmail}
-                onChange={event => setSystemSenderEmail(event.target.value)}
-                placeholder="no-reply@example.com"
-                disabled={!isOwner || isSystemEmailSaving}
-              />
-            </label>
-
-            <label className="admin-users__field">
-              <span>Sender name</span>
-              <input
-                type="text"
-                value={systemSenderName}
-                onChange={event => setSystemSenderName(event.target.value)}
-                placeholder="EmperJS"
-                disabled={!isOwner || isSystemEmailSaving}
-              />
-            </label>
-
-            <label className="admin-users__field">
-              <span>Status</span>
-              <select
-                value={systemStatus}
-                onChange={event => setSystemStatus(event.target.value as `active` | `inactive`)}
-                disabled={!isOwner || isSystemEmailSaving}
-              >
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-              </select>
-            </label>
-
-            <div className="admin-users__role-actions">
-              <button
-                type="button"
-                onClick={() => void handleSaveSystemEmailProvider()}
-                className="admin-users__button admin-users__button--primary"
-                disabled={!isOwner || isSystemEmailSaving}
-              >
-                {isSystemEmailSaving ? `Saving...` : `Save provider`}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDisconnectSystemEmailProvider()}
-                className="admin-users__button admin-users__button--secondary"
-                disabled={!isOwner || !systemConnection || isSystemEmailSaving}
-              >
-                Remove provider
-              </button>
-            </div>
-            {!isOwner ? <p className="admin-users__hint">Read-only for admin users. Owner can edit this setting.</p> : null}
-          </section>
         </div>
       ) : null}
 
@@ -987,6 +923,101 @@ export function AdminUsersPage() {
               </div>
             ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {activeTab === `settings` ? (
+        <div className="admin-users__seller-profiles">
+          <section className="admin-users__card">
+            <h2>Domain email provider</h2>
+            <p>Configure the provider the backend uses to send application emails. This is not your user login session.</p>
+            {isSystemEmailLoading ? <p>Loading settings...</p> : null}
+            {systemEmailError ? <p className="admin-users__error">{systemEmailError}</p> : null}
+            {systemEmailNotice ? <p className="admin-users__notice">{systemEmailNotice}</p> : null}
+
+            <div className="admin-users__provider-buttons">
+              <button
+                type="button"
+                className={`admin-users__provider-button ${systemProvider === `google` ? `is-selected` : ``}`}
+                onClick={() => handleConnectProvider(`google`)}
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                Connect with Google
+              </button>
+              <button
+                type="button"
+                className={`admin-users__provider-button ${systemProvider === `microsoft` ? `is-selected` : ``}`}
+                onClick={() => handleConnectProvider(`microsoft`)}
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                Connect with Microsoft
+              </button>
+            </div>
+
+            <label className="admin-users__field">
+              <span>Account email</span>
+              <input
+                type="email"
+                value={systemAccountEmail}
+                onChange={event => setSystemAccountEmail(event.target.value)}
+                placeholder="owner@example.com"
+                disabled={!isOwner || isSystemEmailSaving}
+              />
+            </label>
+
+            <label className="admin-users__field">
+              <span>Sender email</span>
+              <input
+                type="email"
+                value={systemSenderEmail}
+                onChange={event => setSystemSenderEmail(event.target.value)}
+                placeholder="no-reply@example.com"
+                disabled={!isOwner || isSystemEmailSaving}
+              />
+            </label>
+
+            <label className="admin-users__field">
+              <span>Sender name</span>
+              <input
+                type="text"
+                value={systemSenderName}
+                onChange={event => setSystemSenderName(event.target.value)}
+                placeholder="EmperJS"
+                disabled={!isOwner || isSystemEmailSaving}
+              />
+            </label>
+
+            <label className="admin-users__field">
+              <span>Status</span>
+              <select
+                value={systemStatus}
+                onChange={event => setSystemStatus(event.target.value as `active` | `inactive`)}
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </select>
+            </label>
+
+            <div className="admin-users__role-actions">
+              <button
+                type="button"
+                onClick={() => void handleSaveSystemEmailProvider()}
+                className="admin-users__button admin-users__button--primary"
+                disabled={!isOwner || isSystemEmailSaving}
+              >
+                {isSystemEmailSaving ? `Saving...` : `Save provider`}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDisconnectSystemEmailProvider()}
+                className="admin-users__button admin-users__button--secondary"
+                disabled={!isOwner || !systemConnection || isSystemEmailSaving}
+              >
+                Remove provider
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </section>

@@ -13,6 +13,7 @@ export function Router() {
   const { session, isLoading } = useSession();
   const isAuthenticated = Boolean(session?.authenticated);
   const isAdmin = session?.roles?.includes(`admin`) || session?.roles?.includes(`owner`);
+  const isOwner = session?.roles?.includes(`owner`);
   const canManageProducts = isAdmin || session?.roles?.includes(`seller`);
 
   if (isLoading) {
@@ -31,6 +32,7 @@ export function Router() {
           {isAuthenticated && isAdmin ? <Route path="/admin" element={<Navigate to="/admin/seller-profiles" replace />} /> : null}
           {isAuthenticated && isAdmin ? <Route path="/admin/seller-profiles" element={<AdminUsersPage />} /> : null}
           {isAuthenticated && isAdmin ? <Route path="/admin/users" element={<AdminUsersPage />} /> : null}
+          {isAuthenticated && isOwner ? <Route path="/admin/settings" element={<AdminUsersPage />} /> : null}
           {isAuthenticated && canManageProducts ? <Route path="/shop/products/new" element={<ShopProductPage />} /> : null}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
