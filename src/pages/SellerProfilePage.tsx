@@ -63,6 +63,7 @@ export function SellerProfilePage() {
   const [isMailSaving, setIsMailSaving] = useState(false);
 
   const selectorValue = selector.trim();
+  const selectorPlaceholder = session?.displayName?.trim() || session?.email?.split(`@`)[0] || `your-profile-slug`;
 
   const myMemberRole = useMemo(() => {
     if (!session?.userId) return null;
@@ -330,7 +331,7 @@ export function SellerProfilePage() {
           <form onSubmit={handleLoadProfile} className="seller-profile-page__form">
             <label>
               <span>Seller profile slug</span>
-              <input value={selector} onChange={event => setSelector(event.target.value)} placeholder="berend" required />
+              <input value={selector} onChange={event => setSelector(event.target.value)} placeholder={selectorPlaceholder} required />
             </label>
             <button type="submit" disabled={isLoadingProfile}>{isLoadingProfile ? `Loading...` : `Load profile`}</button>
           </form>
