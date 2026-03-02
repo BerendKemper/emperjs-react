@@ -3,7 +3,6 @@ main#content {
   flex: 1;
 }
 
-/* Testing */
 main#content {
   padding: 1px var(--side-width);
   margin: 0 calc(-1 * var(--side-width));

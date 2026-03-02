@@ -1,0 +1,44 @@
+.inline-note-popover {
+  position: relative;
+}
+
+.inline-note-popover__trigger {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.inline-note-popover__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+  width: min(360px, 80vw);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--interactive-border-secondary-default);
+  background: var(--bg-primary);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+}
+
+.inline-note-popover__panel p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.inline-note-popover__panel p + p {
+  margin-top: 8px;
+}
+
+.inline-note-popover__panel a {
+  color: #2563eb;
+  font-weight: 600;
+}
+

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { LoginButtons } from "../controls/Auth/LoginButtons";
+import { InlineNotePopover } from "../components/InlineNotePopover";
 import { useSession } from "../controls/Auth/useSession";
 import { fetchSellerProfileRequests, updateSellerProfileRequest, type SellerProfileRequest } from "../services/sellerProfileApi";
 import { fetchAdminUsersPage, type UsersApiRecord } from "../services/usersApi";
@@ -72,6 +73,8 @@ type EmailProviderConnectionRecord = {
   status: `active` | `inactive`;
   created_at: number;
   updated_at: number;
+  oauth_scopes?: string | null;
+  oauth_connected_at?: number | null;
 };
 
 type SystemEmailProviderPayload = {
@@ -961,12 +964,26 @@ export function AdminUsersPage() {
                 value={systemAccountEmail}
                 onChange={event => setSystemAccountEmail(event.target.value)}
                 placeholder="owner@example.com"
-                disabled={!isOwner || isSystemEmailSaving}
+                readOnly
+                disabled
               />
+              <small>Set by OAuth connection and not editable here.</small>
             </label>
 
             <label className="admin-users__field">
-              <span>Sender email</span>
+              <div className="admin-users__field-label-row">
+                <span>Sender email</span>
+                <InlineNotePopover triggerLabel="When can I change this?">
+                  <p>
+                    Use only a verified or delegated alias for the connected mailbox; otherwise send calls can fail.
+                  </p>
+                  <p>
+                    <a href="https://developers.google.com/gmail/api/reference/rest/v1/users.settings.sendAs/list" target="_blank" rel="noreferrer">Google send-as docs</a>
+                    {` · `}
+                    <a href="https://learn.microsoft.com/graph/api/resources/user" target="_blank" rel="noreferrer">Microsoft mailbox identity docs</a>
+                  </p>
+                </InlineNotePopover>
+              </div>
               <input
                 type="email"
                 value={systemSenderEmail}
@@ -1004,9 +1021,9 @@ export function AdminUsersPage() {
                 type="button"
                 onClick={() => void handleSaveSystemEmailProvider()}
                 className="admin-users__button admin-users__button--primary"
-                disabled={!isOwner || isSystemEmailSaving}
+                disabled={!isOwner || !systemConnection || isSystemEmailSaving}
               >
-                {isSystemEmailSaving ? `Saving...` : `Save provider`}
+                {isSystemEmailSaving ? `Saving...` : `Save sender settings`}
               </button>
               <button
                 type="button"
@@ -1017,6 +1034,24 @@ export function AdminUsersPage() {
                 Remove provider
               </button>
             </div>
+
+            {systemConnection ? (
+              <div className="admin-users__connected-summary">
+                <p>
+                  Connected account: <strong>{systemConnection.provider}</strong>
+                  {` · `}
+                  <strong>{systemConnection.account_email ?? `unknown`}</strong>
+                </p>
+                <p>
+                  Connected at:{` `}
+                  {new Date(systemConnection.oauth_connected_at ?? systemConnection.updated_at).toLocaleString()}
+                </p>
+              </div>
+            ) : (
+              <p className="admin-users__hint">
+                No connected provider yet. Use Google or Microsoft connect first.
+              </p>
+            )}
           </section>
         </div>
       ) : null}

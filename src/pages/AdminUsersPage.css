@@ -64,6 +64,13 @@
   font-weight: 600;
 }
 
+.admin-users__field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .admin-users__field input {
   border-radius: 10px;
   border: 1px solid var(--interactive-border-secondary-default);
@@ -78,6 +85,28 @@
   background: transparent;
   padding: 10px 12px;
   color: inherit;
+}
+
+.admin-users__field small {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.admin-users__connected-summary {
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.admin-users__connected-summary p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.admin-users__connected-summary p + p {
+  margin-top: 4px;
 }
 
 .admin-users__tabs {
