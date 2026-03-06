@@ -59,14 +59,16 @@
 
 .user-settings__field input {
   border-radius: 10px;
-  border: 1px solid var(--interactive-border-secondary-default);
-  background: transparent;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
   padding: 10px 12px;
-  color: inherit;
+  color: var(--form-text);
 }
 
 .user-settings__field input:focus {
-  outline: 2px solid var(--interactive-border-secondary-hover);
+  outline: none;
+  border-color: var(--form-border-focus);
+  box-shadow: 0 0 0 3px var(--form-shadow-focus);
 }
 
 .user-settings__field small {

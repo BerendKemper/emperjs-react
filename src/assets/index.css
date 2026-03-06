@@ -3,7 +3,6 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
   background-color: var(--bg-primary);
   color: var(--text-primary);
 
@@ -85,4 +84,76 @@ button:active {
 
 button:disabled {
   opacity: 0.5;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+) {
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
+  color: var(--form-text);
+  border-radius: 10px;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+)::placeholder {
+  color: var(--form-placeholder);
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+):hover {
+  border-color: var(--form-border-hover);
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+):focus {
+  border-color: var(--form-border-focus);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--form-shadow-focus);
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea
+):disabled {
+  background: var(--form-bg-disabled);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+input::selection,
+textarea::selection {
+  background: var(--form-selection-bg);
+  color: var(--form-selection-text);
+}
+
+select option {
+  background: var(--form-bg);
+  color: var(--form-text);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--form-text);
+  box-shadow: 0 0 0 1000px var(--form-bg) inset;
+  transition: background-color 9999s ease-in-out 0s;
 }

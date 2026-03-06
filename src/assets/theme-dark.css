@@ -1,134 +1,65 @@
 /* Dark theme */
 :root.dark-mode {
-  --bg-primary: #212121;
-  --bg-primary-inverted: #fff;
-  --bg-secondary: #303030;
-  --bg-tertiary: #414141;
-  --bg-scrim: #0d0d0d80;
-  --bg-elevated-primary: #303030;
-  --bg-elevated-secondary: #181818;
-  --bg-accent-static: #0285ff;
-  --bg-status-warning: #4a2206;
-  --bg-status-error: #4d100e;
-  --border-default: #ffffff26;
-  --border-heavy: #fff3;
-  --border-light: #ffffff0d;
-  --border-status-warning: #4a2206;
-  --border-status-error: #4d100e;
-  --text-primary: #fff;
-  --text-secondary: #f3f3f3;
-  --text-tertiary: #afafaf;
-  --text-inverted: #0d0d0d;
-  --text-inverted-static: #fff;
-  --text-accent: #66b5ff;
-  --text-status-warning: #ff9e6c;
-  --text-status-error: #ff8583;
-  --icon-primary: #e8e8e8;
-  --icon-secondary: #cdcdcd;
-  --icon-tertiary: #afafaf;
-  --icon-inverted: #0d0d0d;
-  --icon-inverted-static: #fff;
-  --icon-accent: #66b5ff;
-  --icon-status-warning: #ff9e6c;
-  --icon-status-error: #ff8583;
-  --interactive-bg-primary-default: #fff;
-  --interactive-bg-primary-hover: #fffc;
-  --interactive-bg-primary-press: #ffffffe5;
-  --interactive-bg-primary-inactive: #fff;
-  --interactive-bg-primary-selected: #fff;
-  --interactive-bg-secondary-default: #fff0;
-  --interactive-bg-secondary-hover: #ffffff1a;
-  --interactive-bg-secondary-press: #ffffff0d;
-  --interactive-bg-secondary-inactive: #fff0;
-  --interactive-bg-secondary-selected: #ffffff1a;
-  --interactive-bg-tertiary-default: #212121;
-  --interactive-bg-tertiary-hover: #181818;
-  --interactive-bg-tertiary-press: #0d0d0d;
-  --interactive-bg-tertiary-inactive: #212121;
-  --interactive-bg-tertiary-selected: #212121;
-  --interactive-bg-accent-default: #013566;
-  --interactive-bg-accent-hover: #003f7a;
-  --interactive-bg-accent-muted-hover: #394a5b;
-  --interactive-bg-accent-muted-context: #394a5b80;
-  --interactive-bg-accent-press: #004f99;
-  --interactive-bg-accent-muted-press: #40484f;
-  --interactive-bg-accent-inactive: #013566;
-  --interactive-bg-danger-primary-default: #e02e2a;
-  --interactive-bg-danger-primary-hover: #fa423e;
-  --interactive-bg-danger-primary-press: #ba2623;
-  --interactive-bg-danger-primary-inactive: #e02e2a;
-  --interactive-bg-danger-secondary-default: #fff0;
-  --interactive-bg-danger-secondary-hover: #fff0;
-  --interactive-bg-danger-secondary-press: #fff0;
-  --interactive-bg-danger-secondary-inactive: #fff0;
-  --interactive-border-focus: #fff;
-  --interactive-border-secondary-default: #ffffff26;
-  --interactive-border-secondary-hover: #ffffff26;
-  --interactive-border-secondary-press: #fff3;
-  --interactive-border-secondary-inactive: #ffffff1a;
-  --interactive-border-tertiary-default: #ffffff1a;
-  --interactive-border-tertiary-hover: #ffffff26;
-  --interactive-border-tertiary-press: #ffffff1a;
-  --interactive-border-tertiary-inactive: #ffffff1a;
-  --interactive-border-danger-secondary-default: #fa423e;
-  --interactive-border-danger-secondary-hover: #ff6764;
-  --interactive-border-danger-secondary-press: #e02e2a;
-  --interactive-border-danger-secondary-inactive: #fa423e;
-  --interactive-label-primary-default: #0d0d0d;
-  --interactive-label-primary-hover: #0d0d0d;
-  --interactive-label-primary-press: #0d0d0d;
-  --interactive-label-primary-inactive: #0d0d0d;
-  --interactive-label-primary-selected: #0d0d0d;
-  --interactive-label-secondary-default: #f3f3f3;
-  --interactive-label-secondary-hover: #ffffffe5;
-  --interactive-label-secondary-press: #fffc;
-  --interactive-label-secondary-inactive: #f3f3f3;
-  --interactive-label-secondary-selected: #f3f3f3;
-  --interactive-label-tertiary-default: #cdcdcd;
-  --interactive-label-tertiary-hover: #cdcdcd;
-  --interactive-label-tertiary-press: #cdcdcd;
-  --interactive-label-tertiary-inactive: #cdcdcd;
-  --interactive-label-tertiary-selected: #cdcdcd;
-  --interactive-label-accent-default: #99ceff;
-  --interactive-label-accent-hover: #99ceff;
-  --interactive-label-accent-press: #99ceff;
-  --interactive-label-accent-inactive: #99ceff;
-  --interactive-label-accent-selected: #99ceff;
-  --interactive-label-danger-primary-default: #fff;
-  --interactive-label-danger-primary-hover: #fff;
-  --interactive-label-danger-primary-press: #fff;
-  --interactive-label-danger-primary-inactive: #fff;
-  --interactive-label-danger-secondary-default: #fa423e;
-  --interactive-label-danger-secondary-hover: #ff6764;
-  --interactive-label-danger-secondary-press: #e02e2a;
-  --interactive-label-danger-secondary-inactive: #fa423e;
-  --interactive-icon-primary-default: #0d0d0d;
-  --interactive-icon-primary-hover: #0d0d0d;
-  --interactive-icon-primary-press: #0d0d0d;
-  --interactive-icon-primary-selected: #0d0d0d;
-  --interactive-icon-primary-inactive: #0d0d0d;
-  --interactive-icon-secondary-default: #f3f3f3;
-  --interactive-icon-secondary-hover: #ffffffe5;
-  --interactive-icon-secondary-press: #fffc;
-  --interactive-icon-secondary-selected: #f3f3f3;
-  --interactive-icon-secondary-inactive: #f3f3f3;
-  --interactive-icon-tertiary-default: #cdcdcd;
-  --interactive-icon-tertiary-hover: #cdcdcd;
-  --interactive-icon-tertiary-press: #cdcdcd;
-  --interactive-icon-tertiary-selected: #cdcdcd;
-  --interactive-icon-tertiary-inactive: #cdcdcd;
-  --interactive-icon-accent-default: #99ceff;
-  --interactive-icon-accent-hover: #99ceff;
-  --interactive-icon-accent-press: #99ceff;
-  --interactive-icon-accent-selected: #99ceff;
-  --interactive-icon-accent-inactive: #99ceff;
-  --interactive-icon-danger-primary-default: #fff;
-  --interactive-icon-danger-primary-hover: #fff;
-  --interactive-icon-danger-primary-press: #fff;
-  --interactive-icon-danger-primary-inactive: #fff;
-  --interactive-icon-danger-secondary-default: #fa423e;
-  --interactive-icon-danger-secondary-hover: #ff6764;
-  --interactive-icon-danger-secondary-press: #e02e2a;
-  --interactive-icon-danger-secondary-inactive: #fa423e;
-  --utility-scrollbar: #fff3;
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg-primary: #0f172a;
+  --bg-secondary: #162033;
+  --bg-tertiary: #1f2a40;
+  --bg-elevated-primary: #111b2e;
+  --bg-elevated-secondary: #1a2740;
+  --bg-scrim: #02061799;
+
+  /* Borders */
+  --border-default: #cbd5e138;
+  --border-heavy: #e2e8f052;
+  --border-light: #cbd5e124;
+
+  /* Text */
+  --text-primary: #e5e7eb;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --text-inverted: #0f172a;
+  --text-accent: #93c5fd;
+
+  /* Status */
+  --bg-status-warning: #3a1f09;
+  --bg-status-error: #3f1115;
+  --border-status-warning: #92400e;
+  --border-status-error: #991b1b;
+  --text-status-warning: #fdba74;
+  --text-status-error: #fda4af;
+
+  /* Interactions */
+  --interactive-bg-primary-default: #3b82f6;
+  --interactive-bg-primary-hover: #2563eb;
+  --interactive-bg-primary-press: #1d4ed8;
+  --interactive-bg-primary-inactive: #60a5fa;
+  --interactive-bg-primary-selected: #2563eb;
+
+  --interactive-bg-secondary-default: #0000;
+  --interactive-bg-secondary-hover: #e2e8f014;
+  --interactive-bg-secondary-press: #e2e8f01f;
+
+  --interactive-border-secondary-default: #cbd5e147;
+  --interactive-border-secondary-hover: #e2e8f052;
+  --interactive-border-secondary-press: #f1f5f966;
+
+  --interactive-label-primary-default: #f8fafc;
+  --interactive-label-accent-hover: #dbeafe;
+
+  /* Forms */
+  --form-bg: #162033;
+  --form-bg-disabled: #0f172a;
+  --form-text: #e5e7eb;
+  --form-placeholder: #94a3b8;
+  --form-border: #cbd5e152;
+  --form-border-hover: #e2e8f066;
+  --form-border-focus: #93c5fd;
+  --form-shadow-focus: #60a5fa3d;
+  --form-selection-bg: #1d4ed8;
+  --form-selection-text: #f8fafc;
+
+  /* Utilities */
+  --utility-scrollbar: #e2e8f03d;
 }

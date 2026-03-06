@@ -48,9 +48,9 @@
 .shop-product__editor input,
 .shop-product__editor textarea {
   border-radius: 10px;
-  border: 1px solid var(--interactive-border-secondary-default);
-  background: transparent;
-  color: inherit;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
+  color: var(--form-text);
   padding: 10px 12px;
 }
 

@@ -41,10 +41,10 @@
 .seller-profile-page__form textarea,
 .seller-profile-page__form select {
   border-radius: 10px;
-  border: 1px solid var(--interactive-border-secondary-default);
-  background: transparent;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
   padding: 10px 12px;
-  color: inherit;
+  color: var(--form-text);
 }
 
 .seller-profile-page__form button {

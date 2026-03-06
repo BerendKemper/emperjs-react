@@ -73,18 +73,18 @@
 
 .admin-users__field input {
   border-radius: 10px;
-  border: 1px solid var(--interactive-border-secondary-default);
-  background: transparent;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
   padding: 10px 12px;
-  color: inherit;
+  color: var(--form-text);
 }
 
 .admin-users__field select {
   border-radius: 10px;
-  border: 1px solid var(--interactive-border-secondary-default);
-  background: transparent;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
   padding: 10px 12px;
-  color: inherit;
+  color: var(--form-text);
 }
 
 .admin-users__field small {

@@ -50,9 +50,9 @@
 .shop-filters__row input,
 .shop-filters__row select {
   border-radius: 10px;
-  border: 1px solid var(--interactive-border-secondary-default);
-  background: transparent;
-  color: inherit;
+  border: 1px solid var(--form-border);
+  background: var(--form-bg);
+  color: var(--form-text);
   padding: 9px 12px;
 }
 
